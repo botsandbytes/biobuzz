@@ -78,7 +78,9 @@ android {
 spotless {
     java {
         target 'src/*/java/**/*.java'
-        googleJavaFormat('1.27.0')
+        // Owned by Pedro-Pathing/Quickstart: keep byte-identical to upstream so GitHub "Sync fork" merges cleanly.
+        targetExclude 'src/main/java/org/firstinspires/ftc/teamcode/pedro/procedures/**'
+        googleJavaFormat('1.36.1')
         removeUnusedImports()
     }
 }
