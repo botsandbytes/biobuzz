@@ -38,8 +38,6 @@ public class MaxVelocityTest extends LinearOpMode {
 
   public static Double power = 1.0;
   public static Double targetVelocity = 1000.0;
-  public static PIDFCoefficients pidfCoefficients = new PIDFCoefficients(150, 0, 0, 22.8);
-  private TelemetryManager telemetryM;
 
   @Override
   public void runOpMode() throws InterruptedException {
@@ -53,7 +51,7 @@ public class MaxVelocityTest extends LinearOpMode {
     double maxMotorVelocity = 0;
     double maxMotor2Velocity = 0;
 
-    telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
+    TelemetryManager telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
 
     DcMotorEx testMotor = hardwareMap.get(DcMotorEx.class, name);
     DcMotorEx testMotor2 = hardwareMap.get(DcMotorEx.class, name2);
