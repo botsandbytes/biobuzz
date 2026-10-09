@@ -7,7 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.config.ConfigLoader;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.records.Alliance;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 
@@ -43,7 +43,7 @@ public class StartPoseFinderOpMode extends OpMode {
   @Override
   public void init() {
     config.reload();
-    follower = Constants.createCachedFollower(hardwareMap);
+    follower = Constants.create(hardwareMap);
     follower.setPose(new Pose(72, 72, 0));
     recomputeConfigStartPose();
   }

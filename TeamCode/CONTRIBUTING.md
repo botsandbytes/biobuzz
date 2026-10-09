@@ -37,7 +37,7 @@ decode/
 │       │   └── config/         # config.yaml, config-docs.yaml, generated RobotConfig.java + schema
 │       ├── records/            # Immutable record/enum types (Alliance, MatchProfile, ...)
 │       ├── utilities/          # Safety systems (Sentinel/Casablanca), vision, drawing, deprecated config shim
-│       ├── pedroPathing/       # Pedro Pathing constants & tuning OpMode
+│       ├── pedro/              # Pedro Pathing constants & tuning OpMode
 │       └── tests/              # Calibration/diagnostic OpModes
 │   └── src/test/java/...       # JVM unit tests (Robolectric) — math/geometry + config schema
 ├── config-compiler/            # Standalone Android library: runtime YAML→POJO ConfigLoader
@@ -73,7 +73,7 @@ org.firstinspires.ftc.teamcode
 | `robot/config/` | `config.yaml`, `config-docs.yaml` (hand-maintained), `RobotConfig.java` + `config-schema.json` (**generated** — never hand-edit) |
 | `records/` | Immutable data: `Alliance`, `Field`, `MatchProfile`, `LaunchParameters`, `PIDGains` |
 | `utilities/` | `Sentinel` / `Casablanca` (safety), `VisionUtil`, `DrawingUtil`, `PIDAutotuner`, deprecated `ConfigLoader` shim |
-| `pedroPathing/` | Pedro Pathing constants, localizer setup, and the vendored tuning OpMode |
+| `pedro/` | Pedro Pathing constants, localizer setup, and the vendored tuning OpMode |
 | `tests/` | Calibration and diagnostic OpModes (not JUnit tests — those live under `src/test/java`) |
 
 ---
@@ -83,7 +83,7 @@ org.firstinspires.ftc.teamcode
 ### `Robot.java` — composition root
 Every OpMode constructs exactly one `Robot(hardwareMap, telemetry, matchProfile)`. Its constructor:
 - Sets all REV hubs to manual bulk-caching mode.
-- Builds the cached `Follower` via `Constants.createCachedFollower(hardwareMap)`.
+- Builds the cached `Follower` via `Constants.create(hardwareMap)`.
 - Constructs `Intake`, `Shooter`, `Turret` (wired to the follower's pose supplier), `Sentinel(profile.alliance())`, `Casablanca(sentinel)`, and `ShotController`.
 
 `Robot.update()` must be called once per loop. It is the **only** place subsystem state advances:
@@ -228,14 +228,14 @@ Intercepts drive commands and scales/repels velocity when the robot approaches i
 
 ## 8. Drivetrain & Pathing
 
-Pathing uses the **Pedro Pathing** library (`com.pedropathing:ftc:2.1.2`).
+Pathing uses the **Pedro Pathing** library (`com.pedropathing:revhub:3.0.1`).
 
 ### Motor Caching
-Use `Constants.createCachedFollower(hardwareMap)` — it wraps all four drivetrain motors in `CachingDcMotorEx`, re-registers them into `hardwareMap`, sets the caching tolerance from `RobotConfig.caching.drivetrain_tolerance`, and builds the `Follower`, all in one call:
+Use `Constants.create(hardwareMap)` from `org.firstinspires.ftc.teamcode.pedro` to build the configured follower. Pedro 3’s `Mecanum` drivetrain caches motor writes internally:
 ```java
-Follower follower = Constants.createCachedFollower(hardwareMap);
+Follower follower = Constants.create(hardwareMap);
 ```
-Only call the plain `Constants.createFollower(hardwareMap)` directly in calibration/tuning OpModes that intentionally want uncached motors.
+Match and calibration/tuning OpModes use this same factory.
 
 ### Path Building
 Paths are built in a `buildPaths()` method using `follower.pathBuilder()`. Use `BezierLine` for straight segments and `BezierCurve` for smooth arcs with control points.
@@ -313,7 +313,7 @@ These are enforced by the AI governance system (`.ai-rulez/`) and apply to all c
 
 1. **No hardcoding** — all tunable values go in `config.yaml`, described in `config-docs.yaml`, accessed via `RobotConfig`.
 2. **Prefer libraries** — never write custom implementations of things libraries already do (geometry, PID, angle math, collections). The one sanctioned exception is `Sentinel`'s SAT fallback, which exists purely to make intersection math unit-testable under Robolectric.
-3. **Cache hardware** — motors/servos must use Dairy caching wrappers. Use `Constants.createCachedFollower(hardwareMap)` for the drivetrain.
+3. **Cache hardware** — use Dairy caching wrappers where applicable. The drivetrain created by `Constants.create(hardwareMap)` uses Pedro 3’s built-in motor write caching.
 4. **Single writer per actuator** — a subsystem's hardware-writing method may only be called from that subsystem's own `periodic()`. Callers set target state (`setTargetPower`, `setAimMode`, ...); `Robot.update()` is the only caller of `periodic()`.
 5. **Dependency injection over static globals** — per-match state (alliance, goals, poses) flows through constructors (`Sentinel(Alliance)`, `Robot(..., MatchProfile)`), never a mutable static holder.
 6. **Never bypass safety** — `Sentinel` and `Casablanca` (via `robot.getSentinel()`/`robot.getCasablanca()`) must remain active in all driving code paths.

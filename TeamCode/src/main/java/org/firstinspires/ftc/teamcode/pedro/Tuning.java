@@ -27,24 +27,15 @@ public final class Tuning {
   @Tuner
   public static Procedure foresightTuner() {
     return new ForesightTuner(
-        h ->
-            new PinpointLocalizer(
-                h, org.firstinspires.ftc.teamcode.pedroPathing.Constants.localizerConfig()),
-        h ->
-            new Mecanum(
-                h, org.firstinspires.ftc.teamcode.pedroPathing.Constants.drivetrainConfig()));
+        h -> new PinpointLocalizer(h, Constants.localizerConfig()),
+        h -> new Mecanum(h, Constants.drivetrainConfig()));
   }
 
   @Tuner
   public static Procedure tests() {
     return new Tests(
-        h ->
-            new Mecanum(
-                h, org.firstinspires.ftc.teamcode.pedroPathing.Constants.drivetrainConfig()),
-        h ->
-            new PinpointLocalizer(
-                h, org.firstinspires.ftc.teamcode.pedroPathing.Constants.localizerConfig()),
-        () ->
-            new Foresight(org.firstinspires.ftc.teamcode.pedroPathing.Constants.foresightConfig()));
+        h -> new Mecanum(h, Constants.drivetrainConfig()),
+        h -> new PinpointLocalizer(h, Constants.localizerConfig()),
+        () -> new Foresight(Constants.foresightConfig()));
   }
 }

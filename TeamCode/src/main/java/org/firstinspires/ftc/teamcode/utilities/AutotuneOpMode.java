@@ -7,7 +7,7 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import java.util.List;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.records.PIDGains;
 
 public abstract class AutotuneOpMode extends OpMode {
@@ -39,7 +39,7 @@ public abstract class AutotuneOpMode extends OpMode {
       module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
     }
 
-    follower = Constants.createFollower(hardwareMap);
+    follower = Constants.create(hardwareMap);
     follower.setPose(new Pose(0, 0, 0));
 
     OpModeUtil.initPanelsField();

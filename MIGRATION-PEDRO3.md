@@ -16,7 +16,7 @@ This branch merges Pedro Pathing QuickStart v3.0.1 with the team's existing `dec
 - Foresight needs calibration data that Pedro 2 did not provide. Known heading gains, maximum forward/strafe speeds, and shared braking coefficients were carried over. Forward/strafe feedback gains, feedforward, heading braking, and natural deceleration are **provisional starting values** in `config.pedro`; they are not verified robot measurements. Foresight may follow paths differently until AutoTune is completed.
 - The team's QuickStart custom build setup was retained because it supplies config generation, Spotless, Error Prone, and JVM tests. The SDK and Pedro dependencies are updated to the QuickStart 3.0.1 versions.
 - `PoseFactory` is used to preserve the prior alliance mirror behavior across Pedro's removed `Pose.mirror()` method. Direct autonomous path helpers retain linear heading interpolation.
-- The earlier `createCachedFollower` method remains as the robot's entry point, but Pedro 3's Mecanum class now caches motor writes internally. Manual Lynx bulk-read cache clearing still happens in `Robot.update()`.
+- The robot uses the QuickStart-style `pedro.Constants.create(hardwareMap)` entry point. Pedro 3's Mecanum class caches motor writes internally. Manual Lynx bulk-read cache clearing still happens in `Robot.update()`.
 
 ## Robot bring-up
 

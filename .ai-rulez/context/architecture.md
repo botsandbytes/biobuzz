@@ -27,8 +27,8 @@ This project is a First Tech Challenge (FTC) robot controller application writte
 
 3. **Drivetrain & Pathing (Pedro Pathing)**:
    - Drivetrain control, localizer, and path-following are managed by **Pedro Pathing**.
-   - Pedro 3.0.1 uses `Follower`, `Foresight`, `Mecanum`, `PinpointLocalizer`, `com.pedropathing.math.Pose`, and `com.pedropathing.api.Paths`. `pedroPathing/Constants.java` builds them from generated `config.pedro` values. `pedro/Constants.java` is the QuickStart-compatible entry point.
-   - `Constants.createCachedFollower(hardwareMap)` is the standard entry point; Pedro 3 Mecanum caches motor writes itself. Bulk read caching (`LynxModule.BulkCachingMode.MANUAL`) is cleared once per loop in `Robot.update()`. `pedro/Tuning.java` registers AutoTune procedures for this drivetrain, localizer, and Foresight.
+   - Pedro 3.0.1 uses `Follower`, `Foresight`, `Mecanum`, `PinpointLocalizer`, `com.pedropathing.math.Pose`, and `com.pedropathing.api.Paths`. `pedro/Constants.java` builds them from generated `config.pedro` values and provides the QuickStart-compatible `create(HardwareMap)` entry point.
+   - `Constants.create(hardwareMap)` is the standard entry point; Pedro 3 Mecanum caches motor writes itself. Bulk read caching (`LynxModule.BulkCachingMode.MANUAL`) is cleared once per loop in `Robot.update()`. `pedro/Tuning.java` registers AutoTune procedures for this drivetrain, localizer, and Foresight.
 
 4. **Ballistics (Shot Solving)**:
    - `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/ballistics/` holds the trajectory model used to aim and spin up the shooter: `BallisticsModel`, `ShotSolver`, `ShotTable`, `ShotTimeTable`, `FlywheelFeedforwardFit`.

@@ -8,7 +8,7 @@ import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Configurable
 @TeleOp
@@ -30,7 +30,7 @@ public class AtanAlignTest extends OpMode {
   @Override
   public void init() {
     org.firstinspires.ftc.teamcode.robot.config.generated.config.reload();
-    follower = Constants.createFollower(hardwareMap);
+    follower = Constants.create(hardwareMap);
     follower.setPose(initialPose);
     follower.update();
 

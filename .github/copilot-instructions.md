@@ -1,7 +1,7 @@
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
 Project: biobuzz
-Generated: 2026-09-27 17:55:24
+Generated: 2026-10-08 23:23:10
 Source: .ai-rulez/config.toml
 
 NEVER edit this file - modify .ai-rulez/ content instead
@@ -9,8 +9,8 @@ Use MCP server: npx -y ai-rulez@latest mcp
 Regenerate: ai-rulez generate
 
 Docs: https://github.com/Goldziher/ai-rulez
-Content-Hash: blake3:6c34549748a1648a20e0e0672fd59a4aa268f0017b6ced083fe0f3893775667d
-Source-Hash: blake3:42fa23687449c7794fbe3740d2a17ee83a38c4dae0e3fbca57b7dfef34d173ec
+Content-Hash: blake3:c8daa0602a67fc944d9ba8c8554dbfd5530798adb8ae90d6dbb9ca4d0a3ccc3d
+Source-Hash: blake3:3dfb7dd99abf50dc956318f7fc8823b4c9003173833a5851ad84ec0a4245e49b
 -->
 
 # biobuzz
@@ -100,8 +100,8 @@ This project is a First Tech Challenge (FTC) robot controller application writte
 
 3. **Drivetrain & Pathing (Pedro Pathing)**:
    - Drivetrain control, localizer, and path-following are managed by **Pedro Pathing**.
-   - Pedro 3.0.1 uses `Follower`, `Foresight`, `Mecanum`, `PinpointLocalizer`, `com.pedropathing.math.Pose`, and `com.pedropathing.api.Paths`. `pedroPathing/Constants.java` builds them from generated `config.pedro` values. `pedro/Constants.java` is the QuickStart-compatible entry point.
-   - `Constants.createCachedFollower(hardwareMap)` is the standard entry point; Pedro 3 Mecanum caches motor writes itself. Bulk read caching (`LynxModule.BulkCachingMode.MANUAL`) is cleared once per loop in `Robot.update()`. `pedro/Tuning.java` registers AutoTune procedures for this drivetrain, localizer, and Foresight.
+   - Pedro 3.0.1 uses `Follower`, `Foresight`, `Mecanum`, `PinpointLocalizer`, `com.pedropathing.math.Pose`, and `com.pedropathing.api.Paths`. `pedro/Constants.java` builds them from generated `config.pedro` values and provides the QuickStart-compatible `create(HardwareMap)` entry point.
+   - `Constants.create(hardwareMap)` is the standard entry point; Pedro 3 Mecanum caches motor writes itself. Bulk read caching (`LynxModule.BulkCachingMode.MANUAL`) is cleared once per loop in `Robot.update()`. `pedro/Tuning.java` registers AutoTune procedures for this drivetrain, localizer, and Foresight.
 
 4. **Ballistics (Shot Solving)**:
    - `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/ballistics/` holds the trajectory model used to aim and spin up the shooter: `BallisticsModel`, `ShotSolver`, `ShotTable`, `ShotTimeTable`, `FlywheelFeedforwardFit`.

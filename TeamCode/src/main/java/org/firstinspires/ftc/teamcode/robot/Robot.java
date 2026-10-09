@@ -7,7 +7,7 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.records.MatchProfile;
 import org.firstinspires.ftc.teamcode.utilities.Casablanca;
 import org.firstinspires.ftc.teamcode.utilities.Sentinel;
@@ -34,7 +34,7 @@ public final class Robot {
       module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
     }
 
-    follower = Constants.createCachedFollower(hardwareMap);
+    follower = Constants.create(hardwareMap);
 
     intake = new Intake(hardwareMap);
     shooter = new Shooter(hardwareMap);
