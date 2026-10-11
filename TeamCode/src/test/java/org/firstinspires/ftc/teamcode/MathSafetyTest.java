@@ -1170,19 +1170,21 @@ public class MathSafetyTest {
     var p = org.firstinspires.ftc.teamcode.robot.config.generated.config.pedro;
     double forward =
         Casablanca.brakingDistance(
-            p.max_forward_velocity, p.forward_brake_linear, p.forward_brake_quadratic);
+            p.motion.max_forward_velocity, p.braking.forward.linear, p.braking.forward.quadratic);
     double strafe =
         Casablanca.brakingDistance(
-            p.max_strafe_velocity, p.strafe_brake_linear, p.strafe_brake_quadratic);
+            p.motion.max_strafe_velocity, p.braking.strafe.linear, p.braking.strafe.quadratic);
     assertTrue(forward / Casablanca.decelSafetyFactor > 0);
     assertTrue(strafe / Casablanca.decelSafetyFactor > 0);
     assertEquals(
         -forward,
         Casablanca.brakingDistance(
-            -p.max_forward_velocity, p.forward_brake_linear, p.forward_brake_quadratic),
+            -p.motion.max_forward_velocity, p.braking.forward.linear, p.braking.forward.quadratic),
         1e-9);
     assertEquals(
-        0, Casablanca.brakingDistance(0, p.forward_brake_linear, p.forward_brake_quadratic), 1e-9);
+        0,
+        Casablanca.brakingDistance(0, p.braking.forward.linear, p.braking.forward.quadratic),
+        1e-9);
   }
 
   @Test

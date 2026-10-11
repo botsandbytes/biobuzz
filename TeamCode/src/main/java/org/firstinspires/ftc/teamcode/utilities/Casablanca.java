@@ -2,10 +2,14 @@ package org.firstinspires.ftc.teamcode.utilities;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.controllers.PIDController;
+import com.pedropathing.drivetrain.DrivePowers;
+import com.pedropathing.ivy.Command;
 import com.pedropathing.math.Pose;
 import com.pedropathing.math.Vector2D;
 import com.pedropathing.utils.Timer;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.records.SlewProfile;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 import org.locationtech.jts.geom.Envelope;
 
@@ -18,9 +22,6 @@ public class Casablanca {
   public static double frictionRot;
 
   public static boolean enableInputSmoothing = true;
-  public static double smoothTime;
-  public static boolean extraSmoothBackLift = true;
-  public static double backLiftMultiplier;
 
   public static double wallRepulsionPower;
   public static double decelSafetyFactor;
@@ -52,9 +53,9 @@ public class Casablanca {
   private final PIDController headingPidf;
 
   private final Timer timer = new Timer();
-  private double currentForward = 0;
-  private double currentStrafe = 0;
-  private double currentTurn = 0;
+  private final DriveSlewLimiter slewLimiter = new DriveSlewLimiter();
+  private SlewProfile slewTuning;
+  private Boolean teleopSlewOverride;
 
   private final Sentinel sentinel;
 
@@ -128,8 +129,7 @@ public class Casablanca {
     frictionY = c.friction.y;
     frictionRot = c.friction.rot;
 
-    smoothTime = c.smoothing.time;
-    backLiftMultiplier = c.smoothing.back_lift_multiplier;
+    enableInputSmoothing = c.smoothing.teleop_enabled;
 
     wallRepulsionPower = c.repulsion.power;
     decelSafetyFactor = c.repulsion.decel_safety_factor;
@@ -157,7 +157,7 @@ public class Casablanca {
     headingLockErrorDeadbandRad = Math.toRadians(hl.error_deadband_deg);
     headingLockSettleRateRad = Math.toRadians(hl.settle_rate_dps);
 
-    this.headingPidf = new PIDController(config.pedro.heading_kp, 0, config.pedro.heading_kd);
+    this.headingPidf = new PIDController(hl.pid.p, hl.pid.i, hl.pid.d);
 
     performBrakingSanityCheck();
 
@@ -165,19 +165,21 @@ public class Casablanca {
   }
 
   private void performBrakingSanityCheck() {
-    double maxVelX = config.pedro.max_forward_velocity;
-    double maxVelY = config.pedro.max_strafe_velocity;
+    double maxVelX = config.pedro.motion.max_forward_velocity;
+    double maxVelY = config.pedro.motion.max_strafe_velocity;
     double minBrakingX =
         Math.abs(
                 brakingDistance(
                     maxVelX,
-                    config.pedro.forward_brake_linear,
-                    config.pedro.forward_brake_quadratic))
+                    config.pedro.braking.forward.linear,
+                    config.pedro.braking.forward.quadratic))
             / decelSafetyFactor;
     double minBrakingY =
         Math.abs(
                 brakingDistance(
-                    maxVelY, config.pedro.strafe_brake_linear, config.pedro.strafe_brake_quadratic))
+                    maxVelY,
+                    config.pedro.braking.strafe.linear,
+                    config.pedro.braking.strafe.quadratic))
             / decelSafetyFactor;
 
     com.qualcomm.robotcore.util.RobotLog.ii(
@@ -193,9 +195,7 @@ public class Casablanca {
 
   public final void reset() {
     timer.reset();
-    currentForward = 0;
-    currentStrafe = 0;
-    currentTurn = 0;
+    slewLimiter.reset();
     headingLockInitialized = false;
     armedAimActive = false;
     goalLockActive = false;
@@ -257,9 +257,7 @@ public class Casablanca {
 
     lastPoseUntrusted = !poseFinite;
     if (!poseFinite) {
-      currentForward = 0;
-      currentStrafe = 0;
-      currentTurn = 0;
+      slewLimiter.reset();
       headingLockInitialized = false;
       return new double[] {0.0, 0.0, 0.0};
     }
@@ -308,7 +306,7 @@ public class Casablanca {
 
           double correction =
               headingPidf.calculate(0, headingError, currentAngularVelocity)
-                  + Math.copySign(ks + config.pedro.heading_ks, headingError);
+                  + Math.copySign(ks + config.casablanca.heading_lock.ks, headingError);
           turn = Math.clamp(correction, -headingLockMaxPower, headingLockMaxPower);
         }
       }
@@ -316,23 +314,21 @@ public class Casablanca {
       headingLockInitialized = false;
     }
 
-    if (enableInputSmoothing) {
-      double dt = timer.seconds();
-      timer.reset();
-      if (dt > 0.2) dt = 0.05;
-
-      double maxChange = (1.0 / smoothTime) * dt;
-      double forwardDiff = forward - currentForward;
-      double allowedForwardChange =
-          (extraSmoothBackLift && forwardDiff < 0) ? maxChange / backLiftMultiplier : maxChange;
-
-      currentForward = applySlewLimit(currentForward, forward, allowedForwardChange);
-      currentStrafe = applySlewLimit(currentStrafe, strafe, maxChange);
-      currentTurn = applySlewLimit(currentTurn, turn, maxChange * 2.5);
-
-      forward = currentForward;
-      strafe = currentStrafe;
-      turn = currentTurn;
+    double dt = timer.seconds();
+    timer.reset();
+    DrivePowers requested = new DrivePowers(forward, strafe, turn);
+    if (slewTuning != null || isTeleopSlewEnabled()) {
+      var s = config.casablanca.smoothing;
+      DrivePowers smoothed =
+          slewLimiter.calculate(
+              requested,
+              Math.min(dt, s.max_loop_dt),
+              slewTuning == null ? SlewProfile.configured() : slewTuning);
+      forward = smoothed.forward();
+      strafe = smoothed.strafe();
+      turn = smoothed.turn();
+    } else {
+      slewLimiter.reset(requested);
     }
 
     Vector2D inputField = Vector2D.cartesian(forward, strafe).rotate(pose.heading());
@@ -380,8 +376,8 @@ public class Casablanca {
               adjFieldX,
               depthSlowDown,
               depthHardStop,
-              config.pedro.forward_brake_linear,
-              config.pedro.forward_brake_quadratic);
+              config.pedro.braking.forward.linear,
+              config.pedro.braking.forward.quadratic);
 
       lastDepthScale = xState.scale;
       adjFieldX *= (1.0 + laneFadeY * (xState.scale - 1.0));
@@ -402,8 +398,8 @@ public class Casablanca {
               adjFieldY,
               sideSlowDown,
               sideHardStop,
-              config.pedro.strafe_brake_linear,
-              config.pedro.strafe_brake_quadratic);
+              config.pedro.braking.strafe.linear,
+              config.pedro.braking.strafe.quadratic);
 
       lastSideScale = yState.scale;
       adjFieldY *= (1.0 + laneFadeX * (yState.scale - 1.0));
@@ -434,9 +430,43 @@ public class Casablanca {
   }
 
   public static double applySlewLimit(double current, double target, double maxChange) {
-    double diff = target - current;
-    if (Math.abs(diff) <= maxChange) return target;
-    return current + Math.signum(diff) * maxChange;
+    return DriveSlewLimiter.limit(current, target, maxChange);
+  }
+
+  /** Temporary per-instance calibration; null restores configured behavior. */
+  public void setSlewTuning(SlewProfile tuning) {
+    slewTuning = tuning;
+  }
+
+  public DrivePowers getSlewOutput() {
+    return slewLimiter.output();
+  }
+
+  /** Per-instance TeleOp command; does not change Pedro's autonomous slew setting. */
+  public Command setTeleopSlewCommand(boolean enabled) {
+    return Command.build()
+        .setStart(() -> setTeleopSlewEnabled(enabled))
+        .setDone(() -> true)
+        .requiring(this);
+  }
+
+  public void setTeleopSlewEnabled(boolean enabled) {
+    teleopSlewOverride = enabled;
+  }
+
+  public boolean isTeleopSlewEnabled() {
+    return teleopSlewOverride != null
+        ? teleopSlewOverride
+        : config.casablanca.smoothing.teleop_enabled && enableInputSmoothing;
+  }
+
+  /** Calibration override; null restores TeleOp YAML gains. Pedro auto gains are independent. */
+  public void setHeadingPid(PIDFCoefficients gains) {
+    PIDFCoefficients p = gains == null ? config.casablanca.heading_lock.pid : gains;
+    headingPidf.kP = p.p;
+    headingPidf.kI = p.i;
+    headingPidf.kD = p.d;
+    headingPidf.reset();
   }
 
   public static double calculateLaneFade(

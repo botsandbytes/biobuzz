@@ -19,26 +19,38 @@ public final class config {
   public static Auto auto;
   public static Teleop teleop;
 
-  public static double PEDRO_PINPOINT_X_POD_OFFSET;
-  public static double PEDRO_PINPOINT_Y_POD_OFFSET;
-  public static double PEDRO_HEADING_KP;
-  public static double PEDRO_HEADING_KD;
+  public static double PEDRO_LOCALIZATION_X_POD_OFFSET;
+  public static double PEDRO_LOCALIZATION_Y_POD_OFFSET;
+  public static double PEDRO_HEADING_PID_P;
+  public static double PEDRO_HEADING_PID_I;
+  public static double PEDRO_HEADING_PID_D;
   public static double PEDRO_HEADING_KS;
-  public static double PEDRO_FORWARD_KP;
-  public static double PEDRO_STRAFE_KP;
-  public static double PEDRO_COAST_KV;
-  public static double PEDRO_BRAKE_KV;
-  public static double PEDRO_FORWARD_BRAKE_LINEAR;
-  public static double PEDRO_STRAFE_BRAKE_LINEAR;
-  public static double PEDRO_FORWARD_BRAKE_QUADRATIC;
-  public static double PEDRO_STRAFE_BRAKE_QUADRATIC;
-  public static double PEDRO_HEADING_BRAKE_LINEAR;
-  public static double PEDRO_HEADING_BRAKE_QUADRATIC;
-  public static double PEDRO_MAX_FORWARD_VELOCITY;
-  public static double PEDRO_MAX_STRAFE_VELOCITY;
-  public static double PEDRO_NATURAL_FORWARD_DECELERATION;
-  public static double PEDRO_NATURAL_STRAFE_DECELERATION;
-  public static double PEDRO_MAX_PATH_SPEED;
+  public static double PEDRO_TRANSLATION_GAIN_THRESHOLD;
+  public static double PEDRO_TRANSLATION_FORWARD_SMALL_ERROR_PID_P;
+  public static double PEDRO_TRANSLATION_FORWARD_SMALL_ERROR_PID_I;
+  public static double PEDRO_TRANSLATION_FORWARD_SMALL_ERROR_PID_D;
+  public static double PEDRO_TRANSLATION_FORWARD_LARGE_ERROR_PID_P;
+  public static double PEDRO_TRANSLATION_FORWARD_LARGE_ERROR_PID_I;
+  public static double PEDRO_TRANSLATION_FORWARD_LARGE_ERROR_PID_D;
+  public static double PEDRO_TRANSLATION_STRAFE_SMALL_ERROR_PID_P;
+  public static double PEDRO_TRANSLATION_STRAFE_SMALL_ERROR_PID_I;
+  public static double PEDRO_TRANSLATION_STRAFE_SMALL_ERROR_PID_D;
+  public static double PEDRO_TRANSLATION_STRAFE_LARGE_ERROR_PID_P;
+  public static double PEDRO_TRANSLATION_STRAFE_LARGE_ERROR_PID_I;
+  public static double PEDRO_TRANSLATION_STRAFE_LARGE_ERROR_PID_D;
+  public static double PEDRO_FEEDFORWARD_COAST_KV;
+  public static double PEDRO_FEEDFORWARD_BRAKE_KV;
+  public static double PEDRO_BRAKING_FORWARD_LINEAR;
+  public static double PEDRO_BRAKING_FORWARD_QUADRATIC;
+  public static double PEDRO_BRAKING_STRAFE_LINEAR;
+  public static double PEDRO_BRAKING_STRAFE_QUADRATIC;
+  public static double PEDRO_BRAKING_HEADING_LINEAR;
+  public static double PEDRO_BRAKING_HEADING_QUADRATIC;
+  public static double PEDRO_MOTION_MAX_FORWARD_VELOCITY;
+  public static double PEDRO_MOTION_MAX_STRAFE_VELOCITY;
+  public static double PEDRO_MOTION_NATURAL_FORWARD_DECELERATION;
+  public static double PEDRO_MOTION_NATURAL_STRAFE_DECELERATION;
+  public static double PEDRO_MOTION_MAX_PATH_SPEED;
   public static boolean TURRET_ENABLED;
   public static double TURRET_MAX_POWER_OUTPUT;
   public static boolean TURRET_SERVO_DIRECTION_INVERTED;
@@ -96,15 +108,82 @@ public final class config {
   public static double CASABLANCA_FRICTION_X;
   public static double CASABLANCA_FRICTION_Y;
   public static double CASABLANCA_FRICTION_ROT;
-  public static double CASABLANCA_SMOOTHING_TIME;
-  public static double CASABLANCA_SMOOTHING_BACK_LIFT_MULTIPLIER;
+  public static boolean CASABLANCA_SMOOTHING_TELEOP_ENABLED;
+  public static boolean CASABLANCA_SMOOTHING_AUTO_ENABLED;
+  public static double CASABLANCA_SMOOTHING_FORWARD_INCREASE_TIME;
+  public static double CASABLANCA_SMOOTHING_FORWARD_DECREASE_TIME;
+  public static double CASABLANCA_SMOOTHING_STRAFE_INCREASE_TIME;
+  public static double CASABLANCA_SMOOTHING_STRAFE_DECREASE_TIME;
+  public static double CASABLANCA_SMOOTHING_TURN_INCREASE_TIME;
+  public static double CASABLANCA_SMOOTHING_TURN_DECREASE_TIME;
+  public static double CASABLANCA_SMOOTHING_MAX_LOOP_DT;
   public static boolean CASABLANCA_HEADING_LOCK_ENABLED;
+  public static double CASABLANCA_HEADING_LOCK_PID_P;
+  public static double CASABLANCA_HEADING_LOCK_PID_I;
+  public static double CASABLANCA_HEADING_LOCK_PID_D;
+  public static double CASABLANCA_HEADING_LOCK_KS;
   public static double CASABLANCA_HEADING_LOCK_INTENT_THRESHOLD;
   public static double CASABLANCA_HEADING_LOCK_KS_MOVING;
   public static double CASABLANCA_HEADING_LOCK_MOVING_SPEED_THRESHOLD;
   public static double CASABLANCA_HEADING_LOCK_MAX_POWER;
   public static double CASABLANCA_HEADING_LOCK_ERROR_DEADBAND_DEG;
   public static double CASABLANCA_HEADING_LOCK_SETTLE_RATE_DPS;
+  public static Pose CASABLANCA_HEADING_TUNER_CALIBRATION_POSE;
+  public static double CASABLANCA_HEADING_TUNER_STEP_DEGREES;
+  public static double CASABLANCA_HEADING_TUNER_MAXIMUM_SWEEP_DEGREES;
+  public static double CASABLANCA_HEADING_TUNER_POSITION_DRIFT_INCHES;
+  public static double CASABLANCA_HEADING_TUNER_HEADING_TOLERANCE_DEGREES;
+  public static double CASABLANCA_HEADING_TUNER_RATE_TOLERANCE_DPS;
+  public static double CASABLANCA_HEADING_TUNER_OVERSHOOT_LIMIT_DEGREES;
+  public static double CASABLANCA_HEADING_TUNER_SETTLE_SEC;
+  public static double CASABLANCA_HEADING_TUNER_TRIAL_TIMEOUT_SEC;
+  public static double CASABLANCA_HEADING_TUNER_STOPPED_SPEED_IPS;
+  public static int CASABLANCA_HEADING_TUNER_SAMPLE_PERIOD_MS;
+  public static double CASABLANCA_HEADING_TUNER_MAXIMUM_SAMPLE_GAP_SEC;
+  public static double CASABLANCA_HEADING_TUNER_P_MIN;
+  public static double CASABLANCA_HEADING_TUNER_P_MAX;
+  public static int CASABLANCA_HEADING_TUNER_P_COUNT;
+  public static double CASABLANCA_HEADING_TUNER_D_MIN;
+  public static double CASABLANCA_HEADING_TUNER_D_MAX;
+  public static int CASABLANCA_HEADING_TUNER_D_COUNT;
+  public static String CASABLANCA_JUMP_TUNER_TRIAL_AXIS;
+  public static double CASABLANCA_JUMP_TUNER_ROTATION_TRIAL_POWER;
+  public static double CASABLANCA_JUMP_TUNER_DRIVE_ANGLE_DEGREES;
+  public static double CASABLANCA_JUMP_TUNER_MAXIMUM_ANGLE_DEGREES;
+  public static double CASABLANCA_JUMP_TUNER_ANGULAR_STOP_MARGIN_DEGREES;
+  public static double CASABLANCA_JUMP_TUNER_ANGULAR_SPEED_BOUND_DPS;
+  public static String CASABLANCA_JUMP_TUNER_IMU_NAME;
+  public static String CASABLANCA_JUMP_TUNER_IMU_LOGO;
+  public static String CASABLANCA_JUMP_TUNER_IMU_USB;
+  public static Pose CASABLANCA_JUMP_TUNER_CALIBRATION_POSE;
+  public static double CASABLANCA_JUMP_TUNER_TRIAL_POWER;
+  public static double CASABLANCA_JUMP_TUNER_MAX_TRAVEL_INCHES;
+  public static double CASABLANCA_JUMP_TUNER_DRIVE_DISTANCE_INCHES;
+  public static double CASABLANCA_JUMP_TUNER_STOP_MARGIN_INCHES;
+  public static double CASABLANCA_JUMP_TUNER_REACTION_TIME_SEC;
+  public static double CASABLANCA_JUMP_TUNER_SPEED_BOUND_IPS;
+  public static double CASABLANCA_JUMP_TUNER_BASELINE_SEC;
+  public static double CASABLANCA_JUMP_TUNER_PEAK_HOLD_SEC;
+  public static double CASABLANCA_JUMP_TUNER_SETTLE_SEC;
+  public static double CASABLANCA_JUMP_TUNER_STOPPED_SPEED_IPS;
+  public static double CASABLANCA_JUMP_TUNER_BASELINE_RATE_DPS;
+  public static double CASABLANCA_JUMP_TUNER_JUMP_TILT_DEG;
+  public static double CASABLANCA_JUMP_TUNER_JUMP_RATE_DPS;
+  public static double CASABLANCA_JUMP_TUNER_JUMP_HOLD_SEC;
+  public static double CASABLANCA_JUMP_TUNER_EMERGENCY_TILT_DEG;
+  public static double CASABLANCA_JUMP_TUNER_IMU_STALE_SEC;
+  public static double CASABLANCA_JUMP_TUNER_TRIAL_TIMEOUT_SEC;
+  public static double CASABLANCA_JUMP_TUNER_STALL_TIMEOUT_SEC;
+  public static double CASABLANCA_JUMP_TUNER_MINIMUM_PROGRESS_INCHES;
+  public static double CASABLANCA_JUMP_TUNER_MINIMUM_PROGRESS_DEGREES;
+  public static double CASABLANCA_JUMP_TUNER_HEADING_DRIFT_DEG;
+  public static double CASABLANCA_JUMP_TUNER_LATERAL_DRIFT_INCHES;
+  public static double CASABLANCA_JUMP_TUNER_POWER_TOLERANCE;
+  public static int CASABLANCA_JUMP_TUNER_SAMPLE_PERIOD_MS;
+  public static double CASABLANCA_JUMP_TUNER_MINIMUM_SLEW_TIME;
+  public static double CASABLANCA_JUMP_TUNER_MAXIMUM_SLEW_TIME;
+  public static double CASABLANCA_JUMP_TUNER_SEARCH_FACTOR;
+  public static int CASABLANCA_JUMP_TUNER_CANDIDATE_COUNT;
   public static boolean SHOOTER_USE_FTC_PID;
   public static double SHOOTER_KS;
   public static double SHOOTER_NOMINAL_VOLTAGE;
@@ -197,26 +276,38 @@ public final class config {
     shooter = ConfigLoader.load(Shooter.class, "shooter");
     auto = ConfigLoader.load(Auto.class, "auto");
     teleop = ConfigLoader.load(Teleop.class, "teleop");
-    PEDRO_PINPOINT_X_POD_OFFSET = pedro.pinpoint_x_pod_offset;
-    PEDRO_PINPOINT_Y_POD_OFFSET = pedro.pinpoint_y_pod_offset;
-    PEDRO_HEADING_KP = pedro.heading_kp;
-    PEDRO_HEADING_KD = pedro.heading_kd;
-    PEDRO_HEADING_KS = pedro.heading_ks;
-    PEDRO_FORWARD_KP = pedro.forward_kp;
-    PEDRO_STRAFE_KP = pedro.strafe_kp;
-    PEDRO_COAST_KV = pedro.coast_kv;
-    PEDRO_BRAKE_KV = pedro.brake_kv;
-    PEDRO_FORWARD_BRAKE_LINEAR = pedro.forward_brake_linear;
-    PEDRO_STRAFE_BRAKE_LINEAR = pedro.strafe_brake_linear;
-    PEDRO_FORWARD_BRAKE_QUADRATIC = pedro.forward_brake_quadratic;
-    PEDRO_STRAFE_BRAKE_QUADRATIC = pedro.strafe_brake_quadratic;
-    PEDRO_HEADING_BRAKE_LINEAR = pedro.heading_brake_linear;
-    PEDRO_HEADING_BRAKE_QUADRATIC = pedro.heading_brake_quadratic;
-    PEDRO_MAX_FORWARD_VELOCITY = pedro.max_forward_velocity;
-    PEDRO_MAX_STRAFE_VELOCITY = pedro.max_strafe_velocity;
-    PEDRO_NATURAL_FORWARD_DECELERATION = pedro.natural_forward_deceleration;
-    PEDRO_NATURAL_STRAFE_DECELERATION = pedro.natural_strafe_deceleration;
-    PEDRO_MAX_PATH_SPEED = pedro.max_path_speed;
+    PEDRO_LOCALIZATION_X_POD_OFFSET = pedro.localization.x_pod_offset;
+    PEDRO_LOCALIZATION_Y_POD_OFFSET = pedro.localization.y_pod_offset;
+    PEDRO_HEADING_PID_P = pedro.heading.pid.p;
+    PEDRO_HEADING_PID_I = pedro.heading.pid.i;
+    PEDRO_HEADING_PID_D = pedro.heading.pid.d;
+    PEDRO_HEADING_KS = pedro.heading.ks;
+    PEDRO_TRANSLATION_GAIN_THRESHOLD = pedro.translation.gain_threshold;
+    PEDRO_TRANSLATION_FORWARD_SMALL_ERROR_PID_P = pedro.translation.forward.small_error_pid.p;
+    PEDRO_TRANSLATION_FORWARD_SMALL_ERROR_PID_I = pedro.translation.forward.small_error_pid.i;
+    PEDRO_TRANSLATION_FORWARD_SMALL_ERROR_PID_D = pedro.translation.forward.small_error_pid.d;
+    PEDRO_TRANSLATION_FORWARD_LARGE_ERROR_PID_P = pedro.translation.forward.large_error_pid.p;
+    PEDRO_TRANSLATION_FORWARD_LARGE_ERROR_PID_I = pedro.translation.forward.large_error_pid.i;
+    PEDRO_TRANSLATION_FORWARD_LARGE_ERROR_PID_D = pedro.translation.forward.large_error_pid.d;
+    PEDRO_TRANSLATION_STRAFE_SMALL_ERROR_PID_P = pedro.translation.strafe.small_error_pid.p;
+    PEDRO_TRANSLATION_STRAFE_SMALL_ERROR_PID_I = pedro.translation.strafe.small_error_pid.i;
+    PEDRO_TRANSLATION_STRAFE_SMALL_ERROR_PID_D = pedro.translation.strafe.small_error_pid.d;
+    PEDRO_TRANSLATION_STRAFE_LARGE_ERROR_PID_P = pedro.translation.strafe.large_error_pid.p;
+    PEDRO_TRANSLATION_STRAFE_LARGE_ERROR_PID_I = pedro.translation.strafe.large_error_pid.i;
+    PEDRO_TRANSLATION_STRAFE_LARGE_ERROR_PID_D = pedro.translation.strafe.large_error_pid.d;
+    PEDRO_FEEDFORWARD_COAST_KV = pedro.feedforward.coast_kv;
+    PEDRO_FEEDFORWARD_BRAKE_KV = pedro.feedforward.brake_kv;
+    PEDRO_BRAKING_FORWARD_LINEAR = pedro.braking.forward.linear;
+    PEDRO_BRAKING_FORWARD_QUADRATIC = pedro.braking.forward.quadratic;
+    PEDRO_BRAKING_STRAFE_LINEAR = pedro.braking.strafe.linear;
+    PEDRO_BRAKING_STRAFE_QUADRATIC = pedro.braking.strafe.quadratic;
+    PEDRO_BRAKING_HEADING_LINEAR = pedro.braking.heading.linear;
+    PEDRO_BRAKING_HEADING_QUADRATIC = pedro.braking.heading.quadratic;
+    PEDRO_MOTION_MAX_FORWARD_VELOCITY = pedro.motion.max_forward_velocity;
+    PEDRO_MOTION_MAX_STRAFE_VELOCITY = pedro.motion.max_strafe_velocity;
+    PEDRO_MOTION_NATURAL_FORWARD_DECELERATION = pedro.motion.natural_forward_deceleration;
+    PEDRO_MOTION_NATURAL_STRAFE_DECELERATION = pedro.motion.natural_strafe_deceleration;
+    PEDRO_MOTION_MAX_PATH_SPEED = pedro.motion.max_path_speed;
     TURRET_ENABLED = turret.enabled;
     TURRET_MAX_POWER_OUTPUT = turret.max_power_output;
     TURRET_SERVO_DIRECTION_INVERTED = turret.servo_direction_inverted;
@@ -274,15 +365,86 @@ public final class config {
     CASABLANCA_FRICTION_X = casablanca.friction.x;
     CASABLANCA_FRICTION_Y = casablanca.friction.y;
     CASABLANCA_FRICTION_ROT = casablanca.friction.rot;
-    CASABLANCA_SMOOTHING_TIME = casablanca.smoothing.time;
-    CASABLANCA_SMOOTHING_BACK_LIFT_MULTIPLIER = casablanca.smoothing.back_lift_multiplier;
+    CASABLANCA_SMOOTHING_TELEOP_ENABLED = casablanca.smoothing.teleop_enabled;
+    CASABLANCA_SMOOTHING_AUTO_ENABLED = casablanca.smoothing.auto_enabled;
+    CASABLANCA_SMOOTHING_FORWARD_INCREASE_TIME = casablanca.smoothing.forward.increase_time;
+    CASABLANCA_SMOOTHING_FORWARD_DECREASE_TIME = casablanca.smoothing.forward.decrease_time;
+    CASABLANCA_SMOOTHING_STRAFE_INCREASE_TIME = casablanca.smoothing.strafe.increase_time;
+    CASABLANCA_SMOOTHING_STRAFE_DECREASE_TIME = casablanca.smoothing.strafe.decrease_time;
+    CASABLANCA_SMOOTHING_TURN_INCREASE_TIME = casablanca.smoothing.turn.increase_time;
+    CASABLANCA_SMOOTHING_TURN_DECREASE_TIME = casablanca.smoothing.turn.decrease_time;
+    CASABLANCA_SMOOTHING_MAX_LOOP_DT = casablanca.smoothing.max_loop_dt;
     CASABLANCA_HEADING_LOCK_ENABLED = casablanca.heading_lock.enabled;
+    CASABLANCA_HEADING_LOCK_PID_P = casablanca.heading_lock.pid.p;
+    CASABLANCA_HEADING_LOCK_PID_I = casablanca.heading_lock.pid.i;
+    CASABLANCA_HEADING_LOCK_PID_D = casablanca.heading_lock.pid.d;
+    CASABLANCA_HEADING_LOCK_KS = casablanca.heading_lock.ks;
     CASABLANCA_HEADING_LOCK_INTENT_THRESHOLD = casablanca.heading_lock.intent_threshold;
     CASABLANCA_HEADING_LOCK_KS_MOVING = casablanca.heading_lock.ks_moving;
     CASABLANCA_HEADING_LOCK_MOVING_SPEED_THRESHOLD = casablanca.heading_lock.moving_speed_threshold;
     CASABLANCA_HEADING_LOCK_MAX_POWER = casablanca.heading_lock.max_power;
     CASABLANCA_HEADING_LOCK_ERROR_DEADBAND_DEG = casablanca.heading_lock.error_deadband_deg;
     CASABLANCA_HEADING_LOCK_SETTLE_RATE_DPS = casablanca.heading_lock.settle_rate_dps;
+    CASABLANCA_HEADING_TUNER_CALIBRATION_POSE = casablanca.heading_tuner.calibration_pose;
+    CASABLANCA_HEADING_TUNER_STEP_DEGREES = casablanca.heading_tuner.step_degrees;
+    CASABLANCA_HEADING_TUNER_MAXIMUM_SWEEP_DEGREES = casablanca.heading_tuner.maximum_sweep_degrees;
+    CASABLANCA_HEADING_TUNER_POSITION_DRIFT_INCHES = casablanca.heading_tuner.position_drift_inches;
+    CASABLANCA_HEADING_TUNER_HEADING_TOLERANCE_DEGREES =
+        casablanca.heading_tuner.heading_tolerance_degrees;
+    CASABLANCA_HEADING_TUNER_RATE_TOLERANCE_DPS = casablanca.heading_tuner.rate_tolerance_dps;
+    CASABLANCA_HEADING_TUNER_OVERSHOOT_LIMIT_DEGREES =
+        casablanca.heading_tuner.overshoot_limit_degrees;
+    CASABLANCA_HEADING_TUNER_SETTLE_SEC = casablanca.heading_tuner.settle_sec;
+    CASABLANCA_HEADING_TUNER_TRIAL_TIMEOUT_SEC = casablanca.heading_tuner.trial_timeout_sec;
+    CASABLANCA_HEADING_TUNER_STOPPED_SPEED_IPS = casablanca.heading_tuner.stopped_speed_ips;
+    CASABLANCA_HEADING_TUNER_SAMPLE_PERIOD_MS = casablanca.heading_tuner.sample_period_ms;
+    CASABLANCA_HEADING_TUNER_MAXIMUM_SAMPLE_GAP_SEC =
+        casablanca.heading_tuner.maximum_sample_gap_sec;
+    CASABLANCA_HEADING_TUNER_P_MIN = casablanca.heading_tuner.p_min;
+    CASABLANCA_HEADING_TUNER_P_MAX = casablanca.heading_tuner.p_max;
+    CASABLANCA_HEADING_TUNER_P_COUNT = casablanca.heading_tuner.p_count;
+    CASABLANCA_HEADING_TUNER_D_MIN = casablanca.heading_tuner.d_min;
+    CASABLANCA_HEADING_TUNER_D_MAX = casablanca.heading_tuner.d_max;
+    CASABLANCA_HEADING_TUNER_D_COUNT = casablanca.heading_tuner.d_count;
+    CASABLANCA_JUMP_TUNER_TRIAL_AXIS = casablanca.jump_tuner.trial_axis;
+    CASABLANCA_JUMP_TUNER_ROTATION_TRIAL_POWER = casablanca.jump_tuner.rotation_trial_power;
+    CASABLANCA_JUMP_TUNER_DRIVE_ANGLE_DEGREES = casablanca.jump_tuner.drive_angle_degrees;
+    CASABLANCA_JUMP_TUNER_MAXIMUM_ANGLE_DEGREES = casablanca.jump_tuner.maximum_angle_degrees;
+    CASABLANCA_JUMP_TUNER_ANGULAR_STOP_MARGIN_DEGREES =
+        casablanca.jump_tuner.angular_stop_margin_degrees;
+    CASABLANCA_JUMP_TUNER_ANGULAR_SPEED_BOUND_DPS = casablanca.jump_tuner.angular_speed_bound_dps;
+    CASABLANCA_JUMP_TUNER_IMU_NAME = casablanca.jump_tuner.imu_name;
+    CASABLANCA_JUMP_TUNER_IMU_LOGO = casablanca.jump_tuner.imu_logo;
+    CASABLANCA_JUMP_TUNER_IMU_USB = casablanca.jump_tuner.imu_usb;
+    CASABLANCA_JUMP_TUNER_CALIBRATION_POSE = casablanca.jump_tuner.calibration_pose;
+    CASABLANCA_JUMP_TUNER_TRIAL_POWER = casablanca.jump_tuner.trial_power;
+    CASABLANCA_JUMP_TUNER_MAX_TRAVEL_INCHES = casablanca.jump_tuner.max_travel_inches;
+    CASABLANCA_JUMP_TUNER_DRIVE_DISTANCE_INCHES = casablanca.jump_tuner.drive_distance_inches;
+    CASABLANCA_JUMP_TUNER_STOP_MARGIN_INCHES = casablanca.jump_tuner.stop_margin_inches;
+    CASABLANCA_JUMP_TUNER_REACTION_TIME_SEC = casablanca.jump_tuner.reaction_time_sec;
+    CASABLANCA_JUMP_TUNER_SPEED_BOUND_IPS = casablanca.jump_tuner.speed_bound_ips;
+    CASABLANCA_JUMP_TUNER_BASELINE_SEC = casablanca.jump_tuner.baseline_sec;
+    CASABLANCA_JUMP_TUNER_PEAK_HOLD_SEC = casablanca.jump_tuner.peak_hold_sec;
+    CASABLANCA_JUMP_TUNER_SETTLE_SEC = casablanca.jump_tuner.settle_sec;
+    CASABLANCA_JUMP_TUNER_STOPPED_SPEED_IPS = casablanca.jump_tuner.stopped_speed_ips;
+    CASABLANCA_JUMP_TUNER_BASELINE_RATE_DPS = casablanca.jump_tuner.baseline_rate_dps;
+    CASABLANCA_JUMP_TUNER_JUMP_TILT_DEG = casablanca.jump_tuner.jump_tilt_deg;
+    CASABLANCA_JUMP_TUNER_JUMP_RATE_DPS = casablanca.jump_tuner.jump_rate_dps;
+    CASABLANCA_JUMP_TUNER_JUMP_HOLD_SEC = casablanca.jump_tuner.jump_hold_sec;
+    CASABLANCA_JUMP_TUNER_EMERGENCY_TILT_DEG = casablanca.jump_tuner.emergency_tilt_deg;
+    CASABLANCA_JUMP_TUNER_IMU_STALE_SEC = casablanca.jump_tuner.imu_stale_sec;
+    CASABLANCA_JUMP_TUNER_TRIAL_TIMEOUT_SEC = casablanca.jump_tuner.trial_timeout_sec;
+    CASABLANCA_JUMP_TUNER_STALL_TIMEOUT_SEC = casablanca.jump_tuner.stall_timeout_sec;
+    CASABLANCA_JUMP_TUNER_MINIMUM_PROGRESS_INCHES = casablanca.jump_tuner.minimum_progress_inches;
+    CASABLANCA_JUMP_TUNER_MINIMUM_PROGRESS_DEGREES = casablanca.jump_tuner.minimum_progress_degrees;
+    CASABLANCA_JUMP_TUNER_HEADING_DRIFT_DEG = casablanca.jump_tuner.heading_drift_deg;
+    CASABLANCA_JUMP_TUNER_LATERAL_DRIFT_INCHES = casablanca.jump_tuner.lateral_drift_inches;
+    CASABLANCA_JUMP_TUNER_POWER_TOLERANCE = casablanca.jump_tuner.power_tolerance;
+    CASABLANCA_JUMP_TUNER_SAMPLE_PERIOD_MS = casablanca.jump_tuner.sample_period_ms;
+    CASABLANCA_JUMP_TUNER_MINIMUM_SLEW_TIME = casablanca.jump_tuner.minimum_slew_time;
+    CASABLANCA_JUMP_TUNER_MAXIMUM_SLEW_TIME = casablanca.jump_tuner.maximum_slew_time;
+    CASABLANCA_JUMP_TUNER_SEARCH_FACTOR = casablanca.jump_tuner.search_factor;
+    CASABLANCA_JUMP_TUNER_CANDIDATE_COUNT = casablanca.jump_tuner.candidate_count;
     SHOOTER_USE_FTC_PID = shooter.use_ftc_pid;
     SHOOTER_KS = shooter.ks;
     SHOOTER_NOMINAL_VOLTAGE = shooter.nominal_voltage;
@@ -363,90 +525,166 @@ public final class config {
   }
 
   public static final class Pedro {
-    /** Forward odometry pod offset in inches; copied from the Pedro 2 forwardPodY calibration. */
-    public double pinpoint_x_pod_offset;
+    public static final class Localization {
+      /** Forward odometry pod offset in inches, recovered from local Pedro 3 tuning. */
+      public double x_pod_offset;
 
-    /** Strafe odometry pod offset in inches; copied from the Pedro 2 strafePodX calibration. */
-    public double pinpoint_y_pod_offset;
+      /** Strafe odometry pod offset in inches, recovered from local Pedro 3 tuning. */
+      public double y_pod_offset;
+    }
 
-    /** Foresight heading P gain copied from the Pedro 2 heading controller; verify on the robot. */
-    public double heading_kp;
+    public Localization localization;
 
-    /** Foresight heading D gain copied from the Pedro 2 heading controller; verify on the robot. */
-    public double heading_kd;
+    public static final class Heading {
+      /**
+       * Heading feedback PID coefficients, bound as SDK PIDFCoefficients. Current Pedro 3 tuning is
+       * proportional-only: keep I and D at zero unless separately tuned.
+       */
+      public com.qualcomm.robotcore.hardware.PIDFCoefficients pid;
 
-    /**
-     * Foresight heading static feedforward copied from the Pedro 2 heading controller; verify on
-     * the robot.
-     */
-    public double heading_ks;
+      /**
+       * Static friction feedforward magnitude. Pedro heading uses zero with the recovered
+       * proportional-only tuning; separate from PID feedback. Minimum: 0.0 Maximum: 1.0
+       */
+      public double ks;
+    }
 
-    /**
-     * Initial Foresight forward translation gain; provisional until AutoTune is run on the robot.
-     */
-    public double forward_kp;
+    public Heading heading;
 
-    /**
-     * Initial Foresight strafe translation gain; provisional until AutoTune is run on the robot.
-     */
-    public double strafe_kp;
+    public static final class Translation {
+      /**
+       * Absolute translation error in inches at which each axis switches to its large-error PID
+       * gains. Minimum: 0.0
+       */
+      public double gain_threshold;
 
-    /** Initial Foresight coast feedforward; provisional until AutoTune is run on the robot. */
-    public double coast_kv;
+      public static final class Forward {
+        /**
+         * Translation PID coefficients below gain_threshold, bound as SDK PIDFCoefficients.
+         * Recovered Pedro 3 tuning uses only P; I and D are zero.
+         */
+        public com.qualcomm.robotcore.hardware.PIDFCoefficients small_error_pid;
 
-    /** Initial Foresight brake feedforward; provisional until AutoTune is run on the robot. */
-    public double brake_kv;
+        /**
+         * Translation PID coefficients at or above gain_threshold, bound as SDK PIDFCoefficients.
+         * Recovered Pedro 3 tuning uses only P; I and D are zero.
+         */
+        public com.qualcomm.robotcore.hardware.PIDFCoefficients large_error_pid;
+      }
 
-    /** Initial forward linear braking coefficient copied from Pedro 2 shared predictive braking. */
-    public double forward_brake_linear;
+      public Forward forward;
 
-    /** Initial strafe linear braking coefficient copied from Pedro 2 shared predictive braking. */
-    public double strafe_brake_linear;
+      public static final class Strafe {
+        /**
+         * Translation PID coefficients below gain_threshold, bound as SDK PIDFCoefficients.
+         * Recovered Pedro 3 tuning uses only P; I and D are zero.
+         */
+        public com.qualcomm.robotcore.hardware.PIDFCoefficients small_error_pid;
 
-    /**
-     * Initial forward quadratic braking coefficient copied from Pedro 2 shared predictive braking.
-     */
-    public double forward_brake_quadratic;
+        /**
+         * Translation PID coefficients at or above gain_threshold, bound as SDK PIDFCoefficients.
+         * Recovered Pedro 3 tuning uses only P; I and D are zero.
+         */
+        public com.qualcomm.robotcore.hardware.PIDFCoefficients large_error_pid;
+      }
 
-    /**
-     * Initial strafe quadratic braking coefficient copied from Pedro 2 shared predictive braking.
-     */
-    public double strafe_brake_quadratic;
+      public Strafe strafe;
+    }
 
-    /** Initial heading linear braking coefficient; provisional until AutoTune is run. */
-    public double heading_brake_linear;
+    public Translation translation;
 
-    /** Initial heading quadratic braking coefficient; provisional until AutoTune is run. */
-    public double heading_brake_quadratic;
+    public static final class Feedforward {
+      /** Foresight coast feedforward gain recovered from local Pedro 3 tuning. Minimum: 0.0 */
+      public double coast_kv;
 
-    /**
-     * Forward velocity in inches per second measured under Pedro 2; remeasure with Pedro 3
-     * AutoTune.
-     */
-    public double max_forward_velocity;
+      /** Foresight brake feedforward gain recovered from local Pedro 3 tuning. Minimum: 0.0 */
+      public double brake_kv;
+    }
 
-    /**
-     * Strafe velocity in inches per second measured under Pedro 2; remeasure with Pedro 3 AutoTune.
-     */
-    public double max_strafe_velocity;
+    public Feedforward feedforward;
 
-    /**
-     * Initial natural forward deceleration in inches per second squared; provisional until AutoTune
-     * is run.
-     */
-    public double natural_forward_deceleration;
+    public static final class Braking {
+      public static final class Forward {
+        /**
+         * Linear coefficient in Foresight stopping displacement: linear * velocity + quadratic *
+         * velocity * abs(velocity). Translation uses inches and heading uses radians.
+         */
+        public double linear;
 
-    /**
-     * Initial natural strafe deceleration in inches per second squared; provisional until AutoTune
-     * is run.
-     */
-    public double natural_strafe_deceleration;
+        /**
+         * Quadratic coefficient in Foresight stopping displacement: linear * velocity + quadratic *
+         * velocity * abs(velocity). Translation uses inches and heading uses radians.
+         */
+        public double quadratic;
+      }
 
-    /**
-     * Maximum Foresight path speed as a fraction of measured top speed; copied from prior path
-     * constraint.
-     */
-    public double max_path_speed;
+      public Forward forward;
+
+      public static final class Strafe {
+        /**
+         * Linear coefficient in Foresight stopping displacement: linear * velocity + quadratic *
+         * velocity * abs(velocity). Translation uses inches and heading uses radians.
+         */
+        public double linear;
+
+        /**
+         * Quadratic coefficient in Foresight stopping displacement: linear * velocity + quadratic *
+         * velocity * abs(velocity). Translation uses inches and heading uses radians.
+         */
+        public double quadratic;
+      }
+
+      public Strafe strafe;
+
+      public static final class Heading {
+        /**
+         * Linear coefficient in Foresight stopping displacement: linear * velocity + quadratic *
+         * velocity * abs(velocity). Translation uses inches and heading uses radians.
+         */
+        public double linear;
+
+        /**
+         * Quadratic coefficient in Foresight stopping displacement: linear * velocity + quadratic *
+         * velocity * abs(velocity). Translation uses inches and heading uses radians.
+         */
+        public double quadratic;
+      }
+
+      public Heading heading;
+    }
+
+    public Braking braking;
+
+    public static final class Motion {
+      /**
+       * Forward velocity in inches per second recovered verbatim from local tuning; unusually low,
+       * verify on robot. Minimum: 0.0
+       */
+      public double max_forward_velocity;
+
+      /** Strafe velocity in inches per second recovered from local Pedro 3 tuning. Minimum: 0.0 */
+      public double max_strafe_velocity;
+
+      /**
+       * Foresight natural forward deceleration in inches per second squared, recovered from local
+       * Pedro 3 tuning. Minimum: 0.0
+       */
+      public double natural_forward_deceleration;
+
+      /**
+       * Foresight natural strafe deceleration in inches per second squared, recovered from local
+       * Pedro 3 tuning. Minimum: 0.0
+       */
+      public double natural_strafe_deceleration;
+
+      /**
+       * Maximum Foresight path speed as a fraction of measured top speed. Explicit speed policy,
+       * not equivalent to the old v2 path-completion threshold. Minimum: 0.0 Maximum: 1.0
+       */
+      public double max_path_speed;
+    }
+
+    public Motion motion;
   }
 
   public static final class Turret {
@@ -767,17 +1005,73 @@ public final class config {
 
     public static final class Smoothing {
       /**
-       * Joystick input filter time constant (seconds). Higher values make acceleration and
-       * deceleration smoother but increase input lag. Minimum: 0.0
+       * Apply directional power slew to Casablanca TeleOp input. Per-instance commands may override
+       * it.
        */
-      public double time;
+      public boolean teleop_enabled;
 
       /**
-       * Divisor scaling factor for deceleration. Divides the deceleration rate when stopping to
-       * slow down the deceleration curve, preventing the robot from tipping forward and lifting its
-       * back wheels. Minimum: 0.0
+       * Apply directional slew to Pedro FOLLOW/HOLD output. False preserves native autonomous
+       * output independently of TeleOp.
        */
-      public double back_lift_multiplier;
+      public boolean auto_enabled;
+
+      public static final class Forward {
+        /**
+         * Seconds per unit increase in signed robot-axis power; 0 is unrestricted. Includes
+         * acceleration in the positive direction and braking from negative power. Tune pod contact
+         * for each axis. Minimum: 0.0
+         */
+        public double increase_time;
+
+        /**
+         * Seconds per unit decrease in signed robot-axis power; 0 is unrestricted. Includes braking
+         * from positive power and acceleration in the negative direction. Minimum: 0.0
+         */
+        public double decrease_time;
+      }
+
+      public Forward forward;
+
+      public static final class Strafe {
+        /**
+         * Seconds per unit increase in signed robot-axis power; 0 is unrestricted. Includes
+         * acceleration in the positive direction and braking from negative power. Tune pod contact
+         * for each axis. Minimum: 0.0
+         */
+        public double increase_time;
+
+        /**
+         * Seconds per unit decrease in signed robot-axis power; 0 is unrestricted. Includes braking
+         * from positive power and acceleration in the negative direction. Minimum: 0.0
+         */
+        public double decrease_time;
+      }
+
+      public Strafe strafe;
+
+      public static final class Turn {
+        /**
+         * Seconds per unit increase in signed robot-axis power; 0 is unrestricted. Includes
+         * acceleration in the positive direction and braking from negative power. Tune pod contact
+         * for each axis. Minimum: 0.0
+         */
+        public double increase_time;
+
+        /**
+         * Seconds per unit decrease in signed robot-axis power; 0 is unrestricted. Includes braking
+         * from positive power and acceleration in the negative direction. Minimum: 0.0
+         */
+        public double decrease_time;
+      }
+
+      public Turn turn;
+
+      /**
+       * Maximum elapsed seconds used by the shared slew limiter per update; prevents a large power
+       * step after a stalled loop. Minimum: 0.001 Maximum: 0.2
+       */
+      public double max_loop_dt;
     }
 
     public Smoothing smoothing;
@@ -785,6 +1079,18 @@ public final class config {
     public static final class HeadingLock {
       /** Enable/disable this subsystem, controller, watchdog, or feature. */
       public boolean enabled;
+
+      /**
+       * Heading feedback PID coefficients, bound as SDK PIDFCoefficients. Current Pedro 3 tuning is
+       * proportional-only: keep I and D at zero unless separately tuned.
+       */
+      public com.qualcomm.robotcore.hardware.PIDFCoefficients pid;
+
+      /**
+       * Static friction feedforward magnitude. Pedro heading uses zero with the recovered
+       * proportional-only tuning; separate from PID feedback. Minimum: 0.0 Maximum: 1.0
+       */
+      public double ks;
 
       /**
        * Raw joystick turn threshold (0.0 to 1.0) above which driver active steering takes control
@@ -826,6 +1132,327 @@ public final class config {
     }
 
     public HeadingLock heading_lock;
+
+    public static final class HeadingTuner {
+      /**
+       * Actual field starting pose [x inches, y inches, heading degrees] for every manually
+       * repositioned jump-tuning trial. Collision protection uses this pose.
+       */
+      public Pose calibration_pose;
+
+      /**
+       * Signed heading step magnitude in each direction for TeleOp heading-lock tuning. Minimum:
+       * 1.0 Maximum: 45.0
+       */
+      public double step_degrees;
+
+      /**
+       * Maximum deviation from each heading trial starting angle before an immediate stop. Minimum:
+       * 1.0 Maximum: 90.0
+       */
+      public double maximum_sweep_degrees;
+
+      /**
+       * Maximum translation during an in-place heading trial before aborting. Minimum: 0.1 Maximum:
+       * 12.0
+       */
+      public double position_drift_inches;
+
+      /**
+       * Required heading settling tolerance; must be at least the TeleOp heading-lock deadband.
+       * Minimum: 0.1 Maximum: 10.0
+       */
+      public double heading_tolerance_degrees;
+
+      /** Maximum absolute yaw rate for settled heading measurements. Minimum: 0.1 Maximum: 30.0 */
+      public double rate_tolerance_dps;
+
+      /**
+       * Reject heading gains whose measured overshoot exceeds this limit. Minimum: 0.1 Maximum:
+       * 20.0
+       */
+      public double overshoot_limit_degrees;
+
+      /**
+       * Stationary observation time after stopping; includes delayed chassis rocking in the jump
+       * result. Minimum: 0.1 Maximum: 3.0
+       */
+      public double settle_sec;
+
+      /**
+       * Maximum duration of one jump-tuning trial including baseline and settling. Minimum: 0.5
+       * Maximum: 30.0
+       */
+      public double trial_timeout_sec;
+
+      /**
+       * Linear velocity magnitude below which a jump-tuning trial is considered stationary.
+       * Minimum: 0.01 Maximum: 5.0
+       */
+      public double stopped_speed_ips;
+
+      /**
+       * Delay between jump-tuner control-loop updates, in milliseconds. Minimum: 1.0 Maximum: 50.0
+       */
+      public int sample_period_ms;
+
+      /**
+       * Abort a heading trial after a control-loop delay above this duration. Minimum: 0.01
+       * Maximum: 0.5
+       */
+      public double maximum_sample_gap_sec;
+
+      /**
+       * Lowest P gain tested by the TeleOp heading-lock step-response tuner (radians). Minimum: 0.0
+       */
+      public double p_min;
+
+      /**
+       * Highest P gain tested by the TeleOp heading-lock step-response tuner (radians). Minimum:
+       * 0.0
+       */
+      public double p_max;
+
+      /** Number of evenly spaced P candidates; 1 tests p_min only. Minimum: 1.0 Maximum: 10.0 */
+      public int p_count;
+
+      /**
+       * Lowest D gain tested by the TeleOp heading-lock tuner using measured yaw rate. Minimum: 0.0
+       */
+      public double d_min;
+
+      /**
+       * Highest D gain tested by the TeleOp heading-lock tuner using measured yaw rate. Minimum:
+       * 0.0
+       */
+      public double d_max;
+
+      /** Number of evenly spaced D candidates; 1 tests d_min only. Minimum: 1.0 Maximum: 10.0 */
+      public int d_count;
+    }
+
+    public HeadingTuner heading_tuner;
+
+    public static final class JumpTuner {
+      /**
+       * Pod contact tuning axis: FORWARD, STRAFE, or TURN. Results apply only to that axis and
+       * tested power; mixed inputs need robot validation.
+       */
+      public String trial_axis;
+
+      /**
+       * Requested yaw input for TURN pod contact trials, before friction compensation. Minimum:
+       * 0.01 Maximum: 1.0
+       */
+      public double rotation_trial_power;
+
+      /**
+       * Powered angular travel before requesting a ramped stop during a TURN pod contact trial.
+       * Minimum: 1.0 Maximum: 90.0
+       */
+      public double drive_angle_degrees;
+
+      /**
+       * Angular travel budget including stopping during a TURN pod contact trial. Minimum: 1.0
+       * Maximum: 180.0
+       */
+      public double maximum_angle_degrees;
+
+      /** Angular braking reserve within the TURN trial travel budget. Minimum: 0.1 Maximum: 45.0 */
+      public double angular_stop_margin_degrees;
+
+      /**
+       * Conservative full-power yaw speed bound for TURN trial braking prediction, degrees per
+       * second. Minimum: 1.0
+       */
+      public double angular_speed_bound_dps;
+
+      /**
+       * Hardware-map name of the Control Hub IMU used when Pinpoint firmware lacks pitch/roll.
+       * Defaults to the FTC built-in IMU name. Pinpoint firmware 3 or newer is preferred
+       * automatically.
+       */
+      public String imu_name;
+
+      /** REV IMU logo-facing direction for the jump tuner; must match the physical mounting. */
+      public String imu_logo;
+
+      /** REV IMU USB-facing direction for the jump tuner; must match the physical mounting. */
+      public String imu_usb;
+
+      /**
+       * Actual field starting pose [x inches, y inches, heading degrees] for every manually
+       * repositioned jump-tuning trial. Collision protection uses this pose.
+       */
+      public Pose calibration_pose;
+
+      /**
+       * Requested forward/reverse input power for jump tuning, before Casablanca friction
+       * compensation. Results are validated only at this power. Minimum: 0.01 Maximum: 1.0
+       */
+      public double trial_power;
+
+      /**
+       * Maximum measured cumulative travel per trial, including stopping. Power is removed earlier
+       * using a stopping reserve. The tuner rejects values above the requested 48-inch ceiling.
+       * Minimum: 1.0 Maximum: 48.0
+       */
+      public double max_travel_inches;
+
+      /**
+       * Maximum powered travel before requesting a ramped stop; total travel including stopping
+       * remains subject to max_travel_inches. Minimum: 0.1 Maximum: 48.0
+       */
+      public double drive_distance_inches;
+
+      /**
+       * Unpowered stopping reserve in inches inside the per-trial traversal limit. Minimum: 0.1
+       * Maximum: 24.0
+       */
+      public double stop_margin_inches;
+
+      /**
+       * Loop/sensor reaction-time allowance used in jump-tuning stopping-room prediction. Minimum:
+       * 0.001 Maximum: 1.0
+       */
+      public double reaction_time_sec;
+
+      /**
+       * Conservative forward speed estimate at full power used by jump-tuning stopping-room
+       * prediction; seeded from the prior 75.6428 in/s measurement. Minimum: 0.1
+       */
+      public double speed_bound_ips;
+
+      /**
+       * Stationary IMU baseline duration before each jump-tuning trial. Minimum: 0.1 Maximum: 5.0
+       */
+      public double baseline_sec;
+
+      /**
+       * Required duration at the requested trial power before a passing trial can certify a
+       * setting. Minimum: 0.01 Maximum: 1.0
+       */
+      public double peak_hold_sec;
+
+      /**
+       * Stationary observation time after stopping; includes delayed chassis rocking in the jump
+       * result. Minimum: 0.1 Maximum: 3.0
+       */
+      public double settle_sec;
+
+      /**
+       * Linear velocity magnitude below which a jump-tuning trial is considered stationary.
+       * Minimum: 0.01 Maximum: 5.0
+       */
+      public double stopped_speed_ips;
+
+      /**
+       * Maximum pitch/roll angular-rate magnitude while taking the stationary baseline. Minimum:
+       * 0.1 Maximum: 30.0
+       */
+      public double baseline_rate_dps;
+
+      /**
+       * Diagnostic combined chassis tilt threshold. Does not establish 4-bar pod contact or reject
+       * a contact-confirmed trial. Minimum: 0.1 Maximum: 20.0
+       */
+      public double jump_tilt_deg;
+
+      /**
+       * Diagnostic combined pitch/roll rate threshold. Pod contact is confirmed by the observer.
+       * Minimum: 1.0 Maximum: 500.0
+       */
+      public double jump_rate_dps;
+
+      /**
+       * Duration for the diagnostic tilt/rate indicator; pod contact verdict comes from the
+       * observer. Minimum: 0.001 Maximum: 1.0
+       */
+      public double jump_hold_sec;
+
+      /**
+       * Baseline-relative tilt that aborts the trial immediately; must exceed jump_tilt_deg.
+       * Minimum: 0.2 Maximum: 30.0
+       */
+      public double emergency_tilt_deg;
+
+      /**
+       * Maximum time without a new IMU orientation sample before aborting the trial. Minimum: 0.01
+       * Maximum: 1.0
+       */
+      public double imu_stale_sec;
+
+      /**
+       * Maximum duration of one jump-tuning trial including baseline and settling. Minimum: 0.5
+       * Maximum: 30.0
+       */
+      public double trial_timeout_sec;
+
+      /**
+       * Maximum time without measurable travel while drive power is requested. Minimum: 0.1
+       * Maximum: 5.0
+       */
+      public double stall_timeout_sec;
+
+      /**
+       * Travel increment that refreshes the jump-tuner stall watchdog. Minimum: 0.01 Maximum: 2.0
+       */
+      public double minimum_progress_inches;
+
+      /**
+       * Angular travel that refreshes the TURN pod-contact trial stall watchdog. Minimum: 0.1
+       * Maximum: 10.0
+       */
+      public double minimum_progress_degrees;
+
+      /**
+       * Maximum heading deviation from the trial start before aborting. Minimum: 0.1 Maximum: 45.0
+       */
+      public double heading_drift_deg;
+
+      /**
+       * Maximum sideways deviation from the straight calibration lane before aborting. Minimum: 0.1
+       * Maximum: 12.0
+       */
+      public double lateral_drift_inches;
+
+      /**
+       * Allowed difference from the requested power when checking trial excitation and zero output.
+       * Minimum: 1.0E-4 Maximum: 0.1
+       */
+      public double power_tolerance;
+
+      /**
+       * Delay between jump-tuner control-loop updates, in milliseconds. Minimum: 1.0 Maximum: 50.0
+       */
+      public int sample_period_ms;
+
+      /**
+       * Fastest nonzero directional slew time tested after an unrestricted contact trial fails.
+       * Minimum: 0.001 Maximum: 2.0
+       */
+      public double minimum_slew_time;
+
+      /**
+       * Slowest directional slew time considered when finding a contact-confirmed baseline.
+       * Minimum: 0.001 Maximum: 3.0
+       */
+      public double maximum_slew_time;
+
+      /**
+       * Multiplicative step between candidate slew settings; must exceed one. Minimum: 1.01
+       * Maximum: 2.0
+       */
+      public double search_factor;
+
+      /**
+       * Maximum number of candidate settings evaluated; a pass requires both forward and reverse
+       * trials. Minimum: 1.0 Maximum: 50.0
+       */
+      public int candidate_count;
+    }
+
+    public JumpTuner jump_tuner;
   }
 
   public static final class Shooter {
@@ -837,6 +1464,10 @@ public final class config {
      */
     public boolean use_ftc_pid;
 
+    /**
+     * Static friction feedforward magnitude. Pedro heading uses zero with the recovered
+     * proportional-only tuning; separate from PID feedback. Minimum: 0.0 Maximum: 1.0
+     */
     public double ks;
 
     /**
