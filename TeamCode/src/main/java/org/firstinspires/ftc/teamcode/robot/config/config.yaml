@@ -1,26 +1,61 @@
-pedro:
-  pinpoint_x_pod_offset: 1.5729952
-  pinpoint_y_pod_offset: -4.535451
-  heading_kp: 0.7
-  heading_kd: 0.002
-  heading_ks: 0.02
-  forward_kp: 0.05
-  strafe_kp: 0.05
-  coast_kv: 0.0132
-  brake_kv: 0.0132
-  forward_brake_linear: 0.05872647384322376
-  strafe_brake_linear: 0.05872647384322376
-  forward_brake_quadratic: 0.001561731123457261
-  strafe_brake_quadratic: 0.001561731123457261
-  heading_brake_linear: 0.0
-  heading_brake_quadratic: 0.0
-  max_forward_velocity: 75.64281986
-  max_strafe_velocity: 58.9247686
-  natural_forward_deceleration: 320.0
-  natural_strafe_deceleration: 320.0
-  max_path_speed: 0.9
-
 # yaml-language-server: $schema=generated/config-schema.json
+pedro:
+  localization:
+    x_pod_offset: 0.8827159160704124
+    y_pod_offset: -5.46341422974594
+
+  heading:
+    pid:
+      p: 4.268315397151918
+      i: 0.0
+      d: 0.0
+    ks: 0.0
+
+  translation:
+    gain_threshold: 2.5
+    forward:
+      small_error_pid:
+        p: 0.11404309007001973
+        i: 0.0
+        d: 0.0
+      large_error_pid:
+        p: 0.3086639721874311
+        i: 0.0
+        d: 0.0
+    strafe:
+      small_error_pid:
+        p: 0.14363321035423612
+        i: 0.0
+        d: 0.0
+      large_error_pid:
+        p: 0.3887512800534528
+        i: 0.0
+        d: 0.0
+
+  feedforward:
+    coast_kv: 0.012572883790573407
+    brake_kv: 0.010686951221987396
+
+  braking:
+    forward:
+      linear: 0.09843454130209381
+      quadratic: 0.0015787148084173775
+    strafe:
+      linear: 0.03541604034426723
+      quadratic: 0.0021434483056786057
+    heading:
+      linear: 0.053255031895873425
+      quadratic: 0.003792767934047215
+
+  motion:
+    # Recheck on robot: this recovered forward velocity is unusually low (inches/second).
+    max_forward_velocity: 79.9698860197901
+    max_strafe_velocity: 64.77428818716172
+    natural_forward_deceleration: 38.68031215213687
+    natural_strafe_deceleration: 60.92227329307563
+    # Explicit speed fraction; the old v2 PathConstraints 0.90 was a completion threshold.
+    max_path_speed: 0.9
+
 turret:
   enabled: true
   max_power_output: 0.5
@@ -100,16 +135,93 @@ casablanca:
     y: 0.1488
     rot: 0.1041
   smoothing:
-    time: 0.22
-    back_lift_multiplier: 2.5
+    teleop_enabled: true
+    auto_enabled: false
+    # Seconds per unit power change; 0 bypasses only that signed direction.
+    forward:
+      increase_time: 0.22
+      decrease_time: 0.55
+    strafe:
+      increase_time: 0.22
+      decrease_time: 0.22
+    turn:
+      increase_time: 0.088
+      decrease_time: 0.088
+    max_loop_dt: 0.05
   heading_lock:
     enabled: true
+    pid:
+      p: 5.818074391107437
+      i: 0.0
+      d: 0.0
+    ks: 0.0
     intent_threshold: 0.05
     ks_moving: 0.0003
     moving_speed_threshold: 10.0
     max_power: 0.30
     error_deadband_deg: 2.0
     settle_rate_dps: 15.0
+
+  heading_tuner:
+    calibration_pose: [72.0, 72.0, 90.0]
+    step_degrees: 10.0
+    maximum_sweep_degrees: 30.0
+    position_drift_inches: 4.0
+    heading_tolerance_degrees: 2.5
+    rate_tolerance_dps: 5.0
+    overshoot_limit_degrees: 3.0
+    settle_sec: 0.4
+    trial_timeout_sec: 4.0
+    stopped_speed_ips: 1.0
+    sample_period_ms: 10
+    maximum_sample_gap_sec: 0.1
+    p_min: 1.0
+    p_max: 10.0
+    p_count: 4
+    d_min: 0.0
+    d_max: 0.9
+    d_count: 4
+
+  jump_tuner:
+    trial_axis: "FORWARD"
+    rotation_trial_power: 0.2
+    drive_angle_degrees: 15.0
+    maximum_angle_degrees: 35.0
+    angular_stop_margin_degrees: 5.0
+    angular_speed_bound_dps: 180.0
+    # Pinpoint pitch/roll is preferred automatically. These configure the fallback only.
+    imu_name: "imu"
+    imu_logo: "RIGHT"
+    imu_usb: "UP"
+    calibration_pose: [72.0, 72.0, 90.0]
+    trial_power: 0.5
+    max_travel_inches: 48.0
+    drive_distance_inches: 16.0
+    stop_margin_inches: 4.0
+    reaction_time_sec: 0.05
+    speed_bound_ips: 75.64281986
+    baseline_sec: 0.5
+    peak_hold_sec: 0.1
+    settle_sec: 0.4
+    stopped_speed_ips: 1.0
+    baseline_rate_dps: 5.0
+    jump_tilt_deg: 3.0
+    jump_rate_dps: 90.0
+    jump_hold_sec: 0.04
+    emergency_tilt_deg: 10.0
+    imu_stale_sec: 0.25
+    trial_timeout_sec: 8.0
+    stall_timeout_sec: 1.0
+    minimum_progress_inches: 0.25
+    minimum_progress_degrees: 0.5
+    heading_drift_deg: 12.0
+    lateral_drift_inches: 4.0
+    power_tolerance: 0.01
+    sample_period_ms: 10
+    minimum_slew_time: 0.05
+    maximum_slew_time: 0.8
+    search_factor: 1.25
+    candidate_count: 12
 
 
 shooter:

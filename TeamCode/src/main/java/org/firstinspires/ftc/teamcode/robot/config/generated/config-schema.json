@@ -6,268 +6,583 @@
     "pedro": {
       "type": "object",
       "properties": {
-        "pinpoint_x_pod_offset": {
-          "description": "Forward odometry pod offset in inches; copied from the Pedro 2 forwardPodY calibration.",
-          "oneOf": [
-            {
-              "type": "number"
+        "localization": {
+          "type": "object",
+          "properties": {
+            "x_pod_offset": {
+              "description": "Forward odometry pod offset in inches, recovered from local Pedro 3 tuning.",
+              "oneOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            "y_pod_offset": {
+              "description": "Strafe odometry pod offset in inches, recovered from local Pedro 3 tuning.",
+              "oneOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             }
+          },
+          "required": [
+            "x_pod_offset",
+            "y_pod_offset"
           ]
         },
-        "pinpoint_y_pod_offset": {
-          "description": "Strafe odometry pod offset in inches; copied from the Pedro 2 strafePodX calibration.",
-          "oneOf": [
-            {
-              "type": "number"
+        "heading": {
+          "type": "object",
+          "properties": {
+            "pid": {
+              "description": "Heading feedback PID coefficients, bound as SDK PIDFCoefficients. Current Pedro 3 tuning is proportional-only: keep I and D at zero unless separately tuned.",
+              "type": "object",
+              "properties": {
+                "p": {
+                  "description": "Proportional feedback gain for this controller.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "i": {
+                  "description": "Integral feedback gain for this controller.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "d": {
+                  "description": "Derivative feedback gain for this controller.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "p",
+                "i",
+                "d"
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            "ks": {
+              "description": "Static friction feedforward magnitude. Pedro heading uses zero with the recovered proportional-only tuning; separate from PID feedback.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             }
+          },
+          "required": [
+            "pid",
+            "ks"
           ]
         },
-        "heading_kp": {
-          "description": "Foresight heading P gain copied from the Pedro 2 heading controller; verify on the robot.",
-          "oneOf": [
-            {
-              "type": "number"
+        "translation": {
+          "type": "object",
+          "properties": {
+            "gain_threshold": {
+              "description": "Absolute translation error in inches at which each axis switches to its large-error PID gains.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            "forward": {
+              "type": "object",
+              "properties": {
+                "small_error_pid": {
+                  "description": "Translation PID coefficients below gain_threshold, bound as SDK PIDFCoefficients. Recovered Pedro 3 tuning uses only P; I and D are zero.",
+                  "type": "object",
+                  "properties": {
+                    "p": {
+                      "description": "Proportional feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "i": {
+                      "description": "Integral feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "d": {
+                      "description": "Derivative feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "p",
+                    "i",
+                    "d"
+                  ]
+                },
+                "large_error_pid": {
+                  "description": "Translation PID coefficients at or above gain_threshold, bound as SDK PIDFCoefficients. Recovered Pedro 3 tuning uses only P; I and D are zero.",
+                  "type": "object",
+                  "properties": {
+                    "p": {
+                      "description": "Proportional feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "i": {
+                      "description": "Integral feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "d": {
+                      "description": "Derivative feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "p",
+                    "i",
+                    "d"
+                  ]
+                }
+              },
+              "required": [
+                "small_error_pid",
+                "large_error_pid"
+              ]
+            },
+            "strafe": {
+              "type": "object",
+              "properties": {
+                "small_error_pid": {
+                  "description": "Translation PID coefficients below gain_threshold, bound as SDK PIDFCoefficients. Recovered Pedro 3 tuning uses only P; I and D are zero.",
+                  "type": "object",
+                  "properties": {
+                    "p": {
+                      "description": "Proportional feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "i": {
+                      "description": "Integral feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "d": {
+                      "description": "Derivative feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "p",
+                    "i",
+                    "d"
+                  ]
+                },
+                "large_error_pid": {
+                  "description": "Translation PID coefficients at or above gain_threshold, bound as SDK PIDFCoefficients. Recovered Pedro 3 tuning uses only P; I and D are zero.",
+                  "type": "object",
+                  "properties": {
+                    "p": {
+                      "description": "Proportional feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "i": {
+                      "description": "Integral feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    },
+                    "d": {
+                      "description": "Derivative feedback gain for this controller.",
+                      "oneOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0
+                        },
+                        {
+                          "type": "string",
+                          "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "p",
+                    "i",
+                    "d"
+                  ]
+                }
+              },
+              "required": [
+                "small_error_pid",
+                "large_error_pid"
+              ]
             }
+          },
+          "required": [
+            "gain_threshold",
+            "forward",
+            "strafe"
           ]
         },
-        "heading_kd": {
-          "description": "Foresight heading D gain copied from the Pedro 2 heading controller; verify on the robot.",
-          "oneOf": [
-            {
-              "type": "number"
+        "feedforward": {
+          "type": "object",
+          "properties": {
+            "coast_kv": {
+              "description": "Foresight coast feedforward gain recovered from local Pedro 3 tuning.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            "brake_kv": {
+              "description": "Foresight brake feedforward gain recovered from local Pedro 3 tuning.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             }
+          },
+          "required": [
+            "coast_kv",
+            "brake_kv"
           ]
         },
-        "heading_ks": {
-          "description": "Foresight heading static feedforward copied from the Pedro 2 heading controller; verify on the robot.",
-          "oneOf": [
-            {
-              "type": "number"
+        "braking": {
+          "type": "object",
+          "properties": {
+            "forward": {
+              "type": "object",
+              "properties": {
+                "linear": {
+                  "description": "Linear coefficient in Foresight stopping displacement: linear * velocity + quadratic * velocity * abs(velocity). Translation uses inches and heading uses radians.",
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "quadratic": {
+                  "description": "Quadratic coefficient in Foresight stopping displacement: linear * velocity + quadratic * velocity * abs(velocity). Translation uses inches and heading uses radians.",
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "linear",
+                "quadratic"
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            "strafe": {
+              "type": "object",
+              "properties": {
+                "linear": {
+                  "description": "Linear coefficient in Foresight stopping displacement: linear * velocity + quadratic * velocity * abs(velocity). Translation uses inches and heading uses radians.",
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "quadratic": {
+                  "description": "Quadratic coefficient in Foresight stopping displacement: linear * velocity + quadratic * velocity * abs(velocity). Translation uses inches and heading uses radians.",
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "linear",
+                "quadratic"
+              ]
+            },
+            "heading": {
+              "type": "object",
+              "properties": {
+                "linear": {
+                  "description": "Linear coefficient in Foresight stopping displacement: linear * velocity + quadratic * velocity * abs(velocity). Translation uses inches and heading uses radians.",
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "quadratic": {
+                  "description": "Quadratic coefficient in Foresight stopping displacement: linear * velocity + quadratic * velocity * abs(velocity). Translation uses inches and heading uses radians.",
+                  "oneOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "linear",
+                "quadratic"
+              ]
             }
+          },
+          "required": [
+            "forward",
+            "strafe",
+            "heading"
           ]
         },
-        "forward_kp": {
-          "description": "Initial Foresight forward translation gain; provisional until AutoTune is run on the robot.",
-          "oneOf": [
-            {
-              "type": "number"
+        "motion": {
+          "type": "object",
+          "properties": {
+            "max_forward_velocity": {
+              "description": "Forward velocity in inches per second recovered verbatim from local tuning; unusually low, verify on robot.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "strafe_kp": {
-          "description": "Initial Foresight strafe translation gain; provisional until AutoTune is run on the robot.",
-          "oneOf": [
-            {
-              "type": "number"
+            "max_strafe_velocity": {
+              "description": "Strafe velocity in inches per second recovered from local Pedro 3 tuning.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "coast_kv": {
-          "description": "Initial Foresight coast feedforward; provisional until AutoTune is run on the robot.",
-          "oneOf": [
-            {
-              "type": "number"
+            "natural_forward_deceleration": {
+              "description": "Foresight natural forward deceleration in inches per second squared, recovered from local Pedro 3 tuning.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "brake_kv": {
-          "description": "Initial Foresight brake feedforward; provisional until AutoTune is run on the robot.",
-          "oneOf": [
-            {
-              "type": "number"
+            "natural_strafe_deceleration": {
+              "description": "Foresight natural strafe deceleration in inches per second squared, recovered from local Pedro 3 tuning.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            "max_path_speed": {
+              "description": "Maximum Foresight path speed as a fraction of measured top speed. Explicit speed policy, not equivalent to the old v2 path-completion threshold.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             }
-          ]
-        },
-        "forward_brake_linear": {
-          "description": "Initial forward linear braking coefficient copied from Pedro 2 shared predictive braking.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "strafe_brake_linear": {
-          "description": "Initial strafe linear braking coefficient copied from Pedro 2 shared predictive braking.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "forward_brake_quadratic": {
-          "description": "Initial forward quadratic braking coefficient copied from Pedro 2 shared predictive braking.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "strafe_brake_quadratic": {
-          "description": "Initial strafe quadratic braking coefficient copied from Pedro 2 shared predictive braking.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "heading_brake_linear": {
-          "description": "Initial heading linear braking coefficient; provisional until AutoTune is run.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "heading_brake_quadratic": {
-          "description": "Initial heading quadratic braking coefficient; provisional until AutoTune is run.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "max_forward_velocity": {
-          "description": "Forward velocity in inches per second measured under Pedro 2; remeasure with Pedro 3 AutoTune.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "max_strafe_velocity": {
-          "description": "Strafe velocity in inches per second measured under Pedro 2; remeasure with Pedro 3 AutoTune.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "natural_forward_deceleration": {
-          "description": "Initial natural forward deceleration in inches per second squared; provisional until AutoTune is run.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "natural_strafe_deceleration": {
-          "description": "Initial natural strafe deceleration in inches per second squared; provisional until AutoTune is run.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
-          ]
-        },
-        "max_path_speed": {
-          "description": "Maximum Foresight path speed as a fraction of measured top speed; copied from prior path constraint.",
-          "oneOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "string",
-              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
-            }
+          },
+          "required": [
+            "max_forward_velocity",
+            "max_strafe_velocity",
+            "natural_forward_deceleration",
+            "natural_strafe_deceleration",
+            "max_path_speed"
           ]
         }
       },
       "required": [
-        "pinpoint_x_pod_offset",
-        "pinpoint_y_pod_offset",
-        "heading_kp",
-        "heading_kd",
-        "heading_ks",
-        "forward_kp",
-        "strafe_kp",
-        "coast_kv",
-        "brake_kv",
-        "forward_brake_linear",
-        "strafe_brake_linear",
-        "forward_brake_quadratic",
-        "strafe_brake_quadratic",
-        "heading_brake_linear",
-        "heading_brake_quadratic",
-        "max_forward_velocity",
-        "max_strafe_velocity",
-        "natural_forward_deceleration",
-        "natural_strafe_deceleration",
-        "max_path_speed"
+        "localization",
+        "heading",
+        "translation",
+        "feedforward",
+        "braking",
+        "motion"
       ]
     },
     "turret": {
@@ -462,9 +777,11 @@
           "type": "object",
           "properties": {
             "p": {
+              "description": "Proportional feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -473,9 +790,11 @@
               ]
             },
             "i": {
+              "description": "Integral feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -484,9 +803,11 @@
               ]
             },
             "d": {
+              "description": "Derivative feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -1105,25 +1426,126 @@
         "smoothing": {
           "type": "object",
           "properties": {
-            "time": {
-              "description": "Joystick input filter time constant (seconds). Higher values make acceleration and deceleration smoother but increase input lag.",
-              "oneOf": [
-                {
-                  "type": "number",
-                  "minimum": 0.0
+            "teleop_enabled": {
+              "description": "Apply directional power slew to Casablanca TeleOp input. Per-instance commands may override it.",
+              "type": "boolean"
+            },
+            "auto_enabled": {
+              "description": "Apply directional slew to Pedro FOLLOW/HOLD output. False preserves native autonomous output independently of TeleOp.",
+              "type": "boolean"
+            },
+            "forward": {
+              "type": "object",
+              "properties": {
+                "increase_time": {
+                  "description": "Seconds per unit increase in signed robot-axis power; 0 is unrestricted. Includes acceleration in the positive direction and braking from negative power. Tune pod contact for each axis.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
                 },
-                {
-                  "type": "string",
-                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                "decrease_time": {
+                  "description": "Seconds per unit decrease in signed robot-axis power; 0 is unrestricted. Includes braking from positive power and acceleration in the negative direction.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
                 }
+              },
+              "required": [
+                "increase_time",
+                "decrease_time"
               ]
             },
-            "back_lift_multiplier": {
-              "description": "Divisor scaling factor for deceleration. Divides the deceleration rate when stopping to slow down the deceleration curve, preventing the robot from tipping forward and lifting its back wheels.",
+            "strafe": {
+              "type": "object",
+              "properties": {
+                "increase_time": {
+                  "description": "Seconds per unit increase in signed robot-axis power; 0 is unrestricted. Includes acceleration in the positive direction and braking from negative power. Tune pod contact for each axis.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "decrease_time": {
+                  "description": "Seconds per unit decrease in signed robot-axis power; 0 is unrestricted. Includes braking from positive power and acceleration in the negative direction.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "increase_time",
+                "decrease_time"
+              ]
+            },
+            "turn": {
+              "type": "object",
+              "properties": {
+                "increase_time": {
+                  "description": "Seconds per unit increase in signed robot-axis power; 0 is unrestricted. Includes acceleration in the positive direction and braking from negative power. Tune pod contact for each axis.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "decrease_time": {
+                  "description": "Seconds per unit decrease in signed robot-axis power; 0 is unrestricted. Includes braking from positive power and acceleration in the negative direction.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "increase_time",
+                "decrease_time"
+              ]
+            },
+            "max_loop_dt": {
+              "description": "Maximum elapsed seconds used by the shared slew limiter per update; prevents a large power step after a stalled loop.",
               "oneOf": [
                 {
                   "type": "number",
-                  "minimum": 0.0
+                  "minimum": 0.001,
+                  "maximum": 0.2
                 },
                 {
                   "type": "string",
@@ -1133,8 +1555,12 @@
             }
           },
           "required": [
-            "time",
-            "back_lift_multiplier"
+            "teleop_enabled",
+            "auto_enabled",
+            "forward",
+            "strafe",
+            "turn",
+            "max_loop_dt"
           ]
         },
         "heading_lock": {
@@ -1143,6 +1569,70 @@
             "enabled": {
               "description": "Enable/disable this subsystem, controller, watchdog, or feature.",
               "type": "boolean"
+            },
+            "pid": {
+              "description": "Heading feedback PID coefficients, bound as SDK PIDFCoefficients. Current Pedro 3 tuning is proportional-only: keep I and D at zero unless separately tuned.",
+              "type": "object",
+              "properties": {
+                "p": {
+                  "description": "Proportional feedback gain for this controller.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "i": {
+                  "description": "Integral feedback gain for this controller.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                },
+                "d": {
+                  "description": "Derivative feedback gain for this controller.",
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string",
+                      "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "p",
+                "i",
+                "d"
+              ]
+            },
+            "ks": {
+              "description": "Static friction feedforward magnitude. Pedro heading uses zero with the recovered proportional-only tuning; separate from PID feedback.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
             },
             "intent_threshold": {
               "description": "Raw joystick turn threshold (0.0 to 1.0) above which driver active steering takes control and disengages heading lock.",
@@ -1228,12 +1718,808 @@
           },
           "required": [
             "enabled",
+            "pid",
+            "ks",
             "intent_threshold",
             "ks_moving",
             "moving_speed_threshold",
             "max_power",
             "error_deadband_deg",
             "settle_rate_dps"
+          ]
+        },
+        "heading_tuner": {
+          "type": "object",
+          "properties": {
+            "calibration_pose": {
+              "description": "Actual field starting pose [x inches, y inches, heading degrees] for every manually repositioned jump-tuning trial. Collision protection uses this pose.",
+              "oneOf": [
+                {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+              ]
+            },
+            "step_degrees": {
+              "description": "Signed heading step magnitude in each direction for TeleOp heading-lock tuning.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 45.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "maximum_sweep_degrees": {
+              "description": "Maximum deviation from each heading trial starting angle before an immediate stop.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 90.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "position_drift_inches": {
+              "description": "Maximum translation during an in-place heading trial before aborting.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 12.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "heading_tolerance_degrees": {
+              "description": "Required heading settling tolerance; must be at least the TeleOp heading-lock deadband.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 10.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "rate_tolerance_dps": {
+              "description": "Maximum absolute yaw rate for settled heading measurements.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 30.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "overshoot_limit_degrees": {
+              "description": "Reject heading gains whose measured overshoot exceeds this limit.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 20.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "settle_sec": {
+              "description": "Stationary observation time after stopping; includes delayed chassis rocking in the jump result.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 3.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "trial_timeout_sec": {
+              "description": "Maximum duration of one jump-tuning trial including baseline and settling.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 30.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "stopped_speed_ips": {
+              "description": "Linear velocity magnitude below which a jump-tuning trial is considered stationary.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 5.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "sample_period_ms": {
+              "description": "Delay between jump-tuner control-loop updates, in milliseconds.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 50.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "maximum_sample_gap_sec": {
+              "description": "Abort a heading trial after a control-loop delay above this duration.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 0.5
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "p_min": {
+              "description": "Lowest P gain tested by the TeleOp heading-lock step-response tuner (radians).",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "p_max": {
+              "description": "Highest P gain tested by the TeleOp heading-lock step-response tuner (radians).",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "p_count": {
+              "description": "Number of evenly spaced P candidates; 1 tests p_min only.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 10.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "d_min": {
+              "description": "Lowest D gain tested by the TeleOp heading-lock tuner using measured yaw rate.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "d_max": {
+              "description": "Highest D gain tested by the TeleOp heading-lock tuner using measured yaw rate.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "d_count": {
+              "description": "Number of evenly spaced D candidates; 1 tests d_min only.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 10.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            }
+          },
+          "required": [
+            "calibration_pose",
+            "step_degrees",
+            "maximum_sweep_degrees",
+            "position_drift_inches",
+            "heading_tolerance_degrees",
+            "rate_tolerance_dps",
+            "overshoot_limit_degrees",
+            "settle_sec",
+            "trial_timeout_sec",
+            "stopped_speed_ips",
+            "sample_period_ms",
+            "maximum_sample_gap_sec",
+            "p_min",
+            "p_max",
+            "p_count",
+            "d_min",
+            "d_max",
+            "d_count"
+          ]
+        },
+        "jump_tuner": {
+          "type": "object",
+          "properties": {
+            "trial_axis": {
+              "description": "Pod contact tuning axis: FORWARD, STRAFE, or TURN. Results apply only to that axis and tested power; mixed inputs need robot validation.",
+              "type": "string"
+            },
+            "rotation_trial_power": {
+              "description": "Requested yaw input for TURN pod contact trials, before friction compensation.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "drive_angle_degrees": {
+              "description": "Powered angular travel before requesting a ramped stop during a TURN pod contact trial.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 90.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "maximum_angle_degrees": {
+              "description": "Angular travel budget including stopping during a TURN pod contact trial.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 180.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "angular_stop_margin_degrees": {
+              "description": "Angular braking reserve within the TURN trial travel budget.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 45.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "angular_speed_bound_dps": {
+              "description": "Conservative full-power yaw speed bound for TURN trial braking prediction, degrees per second.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "imu_name": {
+              "description": "Hardware-map name of the Control Hub IMU used when Pinpoint firmware lacks pitch/roll. Defaults to the FTC built-in IMU name. Pinpoint firmware 3 or newer is preferred automatically.",
+              "type": "string"
+            },
+            "imu_logo": {
+              "description": "REV IMU logo-facing direction for the jump tuner; must match the physical mounting.",
+              "type": "string"
+            },
+            "imu_usb": {
+              "description": "REV IMU USB-facing direction for the jump tuner; must match the physical mounting.",
+              "type": "string"
+            },
+            "calibration_pose": {
+              "description": "Actual field starting pose [x inches, y inches, heading degrees] for every manually repositioned jump-tuning trial. Collision protection uses this pose.",
+              "oneOf": [
+                {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+              ]
+            },
+            "trial_power": {
+              "description": "Requested forward/reverse input power for jump tuning, before Casablanca friction compensation. Results are validated only at this power.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "max_travel_inches": {
+              "description": "Maximum measured cumulative travel per trial, including stopping. Power is removed earlier using a stopping reserve. The tuner rejects values above the requested 48-inch ceiling.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 48.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "drive_distance_inches": {
+              "description": "Maximum powered travel before requesting a ramped stop; total travel including stopping remains subject to max_travel_inches.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 48.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "stop_margin_inches": {
+              "description": "Unpowered stopping reserve in inches inside the per-trial traversal limit.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 24.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "reaction_time_sec": {
+              "description": "Loop/sensor reaction-time allowance used in jump-tuning stopping-room prediction.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.001,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "speed_bound_ips": {
+              "description": "Conservative forward speed estimate at full power used by jump-tuning stopping-room prediction; seeded from the prior 75.6428 in/s measurement.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "baseline_sec": {
+              "description": "Stationary IMU baseline duration before each jump-tuning trial.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 5.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "peak_hold_sec": {
+              "description": "Required duration at the requested trial power before a passing trial can certify a setting.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "settle_sec": {
+              "description": "Stationary observation time after stopping; includes delayed chassis rocking in the jump result.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 3.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "stopped_speed_ips": {
+              "description": "Linear velocity magnitude below which a jump-tuning trial is considered stationary.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 5.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "baseline_rate_dps": {
+              "description": "Maximum pitch/roll angular-rate magnitude while taking the stationary baseline.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 30.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "jump_tilt_deg": {
+              "description": "Diagnostic combined chassis tilt threshold. Does not establish 4-bar pod contact or reject a contact-confirmed trial.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 20.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "jump_rate_dps": {
+              "description": "Diagnostic combined pitch/roll rate threshold. Pod contact is confirmed by the observer.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 500.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "jump_hold_sec": {
+              "description": "Duration for the diagnostic tilt/rate indicator; pod contact verdict comes from the observer.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.001,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "emergency_tilt_deg": {
+              "description": "Baseline-relative tilt that aborts the trial immediately; must exceed jump_tilt_deg.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.2,
+                  "maximum": 30.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "imu_stale_sec": {
+              "description": "Maximum time without a new IMU orientation sample before aborting the trial.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 1.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "trial_timeout_sec": {
+              "description": "Maximum duration of one jump-tuning trial including baseline and settling.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.5,
+                  "maximum": 30.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "stall_timeout_sec": {
+              "description": "Maximum time without measurable travel while drive power is requested.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 5.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "minimum_progress_inches": {
+              "description": "Travel increment that refreshes the jump-tuner stall watchdog.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.01,
+                  "maximum": 2.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "minimum_progress_degrees": {
+              "description": "Angular travel that refreshes the TURN pod-contact trial stall watchdog.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 10.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "heading_drift_deg": {
+              "description": "Maximum heading deviation from the trial start before aborting.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 45.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "lateral_drift_inches": {
+              "description": "Maximum sideways deviation from the straight calibration lane before aborting.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 12.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "power_tolerance": {
+              "description": "Allowed difference from the requested power when checking trial excitation and zero output.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0E-4,
+                  "maximum": 0.1
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "sample_period_ms": {
+              "description": "Delay between jump-tuner control-loop updates, in milliseconds.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 50.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "minimum_slew_time": {
+              "description": "Fastest nonzero directional slew time tested after an unrestricted contact trial fails.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.001,
+                  "maximum": 2.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "maximum_slew_time": {
+              "description": "Slowest directional slew time considered when finding a contact-confirmed baseline.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.001,
+                  "maximum": 3.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "search_factor": {
+              "description": "Multiplicative step between candidate slew settings; must exceed one.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.01,
+                  "maximum": 2.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "candidate_count": {
+              "description": "Maximum number of candidate settings evaluated; a pass requires both forward and reverse trials.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 1.0,
+                  "maximum": 50.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            }
+          },
+          "required": [
+            "trial_axis",
+            "rotation_trial_power",
+            "drive_angle_degrees",
+            "maximum_angle_degrees",
+            "angular_stop_margin_degrees",
+            "angular_speed_bound_dps",
+            "imu_name",
+            "imu_logo",
+            "imu_usb",
+            "calibration_pose",
+            "trial_power",
+            "max_travel_inches",
+            "drive_distance_inches",
+            "stop_margin_inches",
+            "reaction_time_sec",
+            "speed_bound_ips",
+            "baseline_sec",
+            "peak_hold_sec",
+            "settle_sec",
+            "stopped_speed_ips",
+            "baseline_rate_dps",
+            "jump_tilt_deg",
+            "jump_rate_dps",
+            "jump_hold_sec",
+            "emergency_tilt_deg",
+            "imu_stale_sec",
+            "trial_timeout_sec",
+            "stall_timeout_sec",
+            "minimum_progress_inches",
+            "minimum_progress_degrees",
+            "heading_drift_deg",
+            "lateral_drift_inches",
+            "power_tolerance",
+            "sample_period_ms",
+            "minimum_slew_time",
+            "maximum_slew_time",
+            "search_factor",
+            "candidate_count"
           ]
         }
       },
@@ -1246,7 +2532,9 @@
         "lane_blend_distance",
         "friction",
         "smoothing",
-        "heading_lock"
+        "heading_lock",
+        "heading_tuner",
+        "jump_tuner"
       ]
     },
     "shooter": {
@@ -1257,9 +2545,12 @@
           "type": "boolean"
         },
         "ks": {
+          "description": "Static friction feedforward magnitude. Pedro heading uses zero with the recovered proportional-only tuning; separate from PID feedback.",
           "oneOf": [
             {
-              "type": "number"
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
             },
             {
               "type": "string",
@@ -1490,9 +2781,11 @@
           "type": "object",
           "properties": {
             "p": {
+              "description": "Proportional feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -1501,9 +2794,11 @@
               ]
             },
             "i": {
+              "description": "Integral feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -1512,9 +2807,11 @@
               ]
             },
             "d": {
+              "description": "Derivative feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -1546,9 +2843,11 @@
           "type": "object",
           "properties": {
             "p": {
+              "description": "Proportional feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -1557,9 +2856,11 @@
               ]
             },
             "i": {
+              "description": "Integral feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",
@@ -1568,9 +2869,11 @@
               ]
             },
             "d": {
+              "description": "Derivative feedback gain for this controller.",
               "oneOf": [
                 {
-                  "type": "number"
+                  "type": "number",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string",

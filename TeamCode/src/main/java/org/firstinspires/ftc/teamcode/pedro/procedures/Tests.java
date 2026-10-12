@@ -151,6 +151,9 @@ class TestsHold extends TuningOpMode<Boolean> {
         }
         return true;
     }
+
+
+
 }
 
 class TestsLine extends TuningOpMode<Boolean> {
@@ -469,6 +472,35 @@ class TestsPose extends TuningOpMode<Boolean> {
     @Override
     public Boolean runTuningOpMode() throws InterruptedException {
         Localizer localizer = localizerFunction.apply(hardwareMap);
+
+        Thread.sleep(1000);
+        waitForStart();
+
+        // Read the sensor before requesting a reset.
+        localizer.update();
+        String beforeReset = localizer.pose().toString();
+
+        localizer.setPose(Pose.zero());
+        String immediatelyAfterReset = localizer.pose().toString();
+
+        localizer.update();
+        String afterFirstUpdate = localizer.pose().toString();
+
+        while (opModeIsActive()) {
+            localizer.update();
+
+            telemetry.addData("Before reset", beforeReset);
+            telemetry.addData("Immediately after reset", immediatelyAfterReset);
+            telemetry.addData("After first update", afterFirstUpdate);
+            telemetry.addData("Live pose", localizer.pose());
+            telemetry.update();
+        }
+
+        return true;
+    }
+    /*@Override
+    public Boolean runTuningOpMode() throws InterruptedException {
+        Localizer localizer = localizerFunction.apply(hardwareMap);
         Thread.sleep(1000);
         waitForStart();
         localizer.setPose(Pose.zero());
@@ -479,7 +511,7 @@ class TestsPose extends TuningOpMode<Boolean> {
             telemetry.update();
         }
         return true;
-    }
+    }*/
 }
 
 
