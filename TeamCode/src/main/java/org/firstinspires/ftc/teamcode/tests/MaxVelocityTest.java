@@ -8,11 +8,15 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.MotorControlAlgorithm;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 /**
  * Spins one or both flywheel motors at {@link #targetVelocity} and reports each motor's velocity,
  * peak velocity, and time to reach 95% of target.
+ *
+ * <p>Runs the hub's velocity loop with the SDK default gains, not {@code shooter.motor_pidf}.
  *
  * <p>Controls: X stops the motors (latched), A restarts the run, Y resets the peak/timing stats.
  */
@@ -38,6 +42,13 @@ public class MaxVelocityTest extends LinearOpMode {
   public static Double power = 1.0;
   public static Double targetVelocity = 1000.0;
 
+  // SDK default velocity gains (the ExpansionHubMotorControllerVelocityParams on REV's motor
+  // types). Written explicitly because Shooter's shooter.motor_pidf stays on the hub across an app
+  // restart or deploy until the hub is power-cycled, and would otherwise be what this test runs
+  // with.
+  private static final PIDFCoefficients DEFAULT_VELOCITY_PIDF =
+      new PIDFCoefficients(10, 3, 0, 0, MotorControlAlgorithm.LegacyPID);
+
   @Override
   public void runOpMode() throws InterruptedException {
     org.firstinspires.ftc.teamcode.robot.config.generated.config.reload();
@@ -57,6 +68,9 @@ public class MaxVelocityTest extends LinearOpMode {
     // FLOAT so a disabled motor coasts with the flywheel instead of braking against the other one.
     testMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
     testMotor2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+    testMotor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DEFAULT_VELOCITY_PIDF);
+    testMotor2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DEFAULT_VELOCITY_PIDF);
+    PIDFCoefficients appliedPidf = testMotor.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
 
     waitForStart();
 
@@ -114,6 +128,7 @@ public class MaxVelocityTest extends LinearOpMode {
 
       telemetryM.addData("Enabled", enabled);
       telemetryM.addData("Running", running);
+      telemetryM.addData("Velocity PIDF", appliedPidf);
       telemetryM.addData("Target Velocity", targetVelocity);
       telemetryM.addData("Motor Velocity", motor_velocity);
       telemetryM.addData("Motor Velocity Motor 2", motor2_velocity);
