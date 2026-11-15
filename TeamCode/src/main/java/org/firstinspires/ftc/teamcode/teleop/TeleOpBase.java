@@ -21,6 +21,7 @@ import org.firstinspires.ftc.teamcode.game.MatchClock;
 import org.firstinspires.ftc.teamcode.records.Alliance;
 import org.firstinspires.ftc.teamcode.records.HiveCell;
 import org.firstinspires.ftc.teamcode.records.MatchProfile;
+import org.firstinspires.ftc.teamcode.robot.FlowerFlap;
 import org.firstinspires.ftc.teamcode.robot.Intake;
 import org.firstinspires.ftc.teamcode.robot.Robot;
 import org.firstinspires.ftc.teamcode.robot.Shooter;
@@ -66,6 +67,7 @@ public abstract class TeleOpBase extends OpMode {
   protected Robot robot;
   protected Follower follower;
   protected Intake intake;
+  protected FlowerFlap flap;
   protected Shooter shooter;
   protected Turret turret;
   protected ShotController shotController;
@@ -85,6 +87,7 @@ public abstract class TeleOpBase extends OpMode {
   protected ButtonTracker operatorY = new ButtonTracker();
   protected ButtonTracker operatorDpadUp = new ButtonTracker();
   protected ButtonTracker operatorDpadDown = new ButtonTracker();
+  protected ButtonTracker operatorDpadLeft = new ButtonTracker();
   protected ButtonTracker operatorDpadRight = new ButtonTracker();
   protected ButtonTracker operatorRightTrigger = new ButtonTracker();
   protected ButtonTracker operatorLeftTrigger = new ButtonTracker();
@@ -92,6 +95,7 @@ public abstract class TeleOpBase extends OpMode {
   protected ButtonTracker operatorRightBumper = new ButtonTracker();
   protected ButtonTracker operatorBack = new ButtonTracker();
   protected ButtonTracker operatorLeftStick = new ButtonTracker();
+  protected ButtonTracker operatorRightStick = new ButtonTracker();
 
   protected ButtonTracker driverX = new ButtonTracker();
   protected ButtonTracker driverDpadLeft = new ButtonTracker();
@@ -149,9 +153,10 @@ public abstract class TeleOpBase extends OpMode {
         OpModeUtil.resolveTeleOpStart(blackboard, profile, Robot.nowMs());
     allianceUnconfirmed = !driverSelected && !start.allianceConfirmed();
 
-    robot = new Robot(hardwareMap, telemetry, profile);
+    robot = new Robot(hardwareMap, telemetry, profile, true);
     follower = robot.follower;
     intake = robot.intake;
+    flap = robot.flap;
     shooter = robot.shooter;
     turret = robot.turret;
     shotController = robot.shotController;
@@ -231,6 +236,10 @@ public abstract class TeleOpBase extends OpMode {
       }
     }
 
+    telemetry.addData("Flower flap", flap.status());
+    telemetry.addData("Flap positions (0-1)", flap.positionStatus());
+    telemetry.addLine(
+        "Gamepad 2 D-pad up: flap UP; D-pad left: flap toggle; right-stick click: UP");
     telemetry.addData("Alliance", profile.alliance());
     if (allianceUnconfirmed) {
       telemetry.addLine("!! No fresh handoff: confirm alliance. Press B = RED, X = BLUE.");
@@ -259,12 +268,14 @@ public abstract class TeleOpBase extends OpMode {
     operatorDpadUp.update(operator.dpad_up);
     operatorDpadDown.update(operator.dpad_down);
     operatorDpadRight.update(operator.dpad_right);
+    operatorDpadLeft.update(operator.dpad_left);
     operatorRightTrigger.update(operator.right_trigger > 0.5);
     operatorLeftTrigger.update(operator.left_trigger > 0.5);
     operatorLeftBumper.update(operator.left_bumper);
     operatorRightBumper.update(operator.right_bumper);
     operatorBack.update(operator.back);
     operatorLeftStick.update(operator.left_stick_button);
+    operatorRightStick.update(operator.right_stick_button);
 
     driverX.update(driver.x);
     driverDpadLeft.update(driver.dpad_left);
@@ -400,6 +411,8 @@ public abstract class TeleOpBase extends OpMode {
     if (parkAlertActive) {
       telemetryM.addLine("!!!!!!!!!! PARK NOW !!!!!!!!!!");
     }
+    telemetryM.addData("Flower flap (D-pad up: UP; left: toggle)", flap.status());
+    telemetryM.addData("Flap positions (0-1)", flap.positionStatus());
     telemetryM.addData("Alliance", profile.alliance());
     telemetryM.addData(
         "Time left",
@@ -466,6 +479,9 @@ public abstract class TeleOpBase extends OpMode {
             : "unknown (no entry sensor)");
     telemetryM.addData("Ball type", shotController.getBallType());
     telemetryM.addData("Shot", shotController.getGateReason());
+    telemetryM.addData("shooter motor", shooter.getFirstMotorStatus());
+    telemetryM.addData("shooter2 motor", shooter.getSecondMotorStatus());
+    telemetryM.addData("rightIntake motor", intake.getMotorStatus());
     telemetryM.addData("Pose", follower.pose());
     telemetryM.addData("Pose assist", driveAssistStatus);
     if (!relocalizeStatus.isEmpty()) {

@@ -22,13 +22,22 @@ public final class OpModeUtil {
    * ConfigSanity problem with the values in use. Call from every OpMode's init_loop.
    */
   public static void reportConfig(org.firstinspires.ftc.robotcore.external.Telemetry telemetry) {
+    for (String line : configReport()) {
+      telemetry.addLine(line);
+    }
+  }
+
+  /** The lines {@link #reportConfig} shows, for tuning procedures that have no telemetry. */
+  public static java.util.List<String> configReport() {
+    java.util.List<String> lines = new java.util.ArrayList<>();
     String rejection = org.firstinspires.ftc.teamcode.config.ConfigLoader.overrideRejection();
     if (rejection != null) {
-      telemetry.addLine("!! Pushed config ignored: " + rejection);
+      lines.add("!! Pushed config ignored: " + rejection);
     }
     for (String problem : ConfigSanity.problems()) {
-      telemetry.addLine("!! Config: " + problem);
+      lines.add("!! Config: " + problem);
     }
+    return lines;
   }
 
   /**

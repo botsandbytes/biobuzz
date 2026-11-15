@@ -5,11 +5,14 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
+import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 
 @TeleOp(name = "Turn Analog Test", group = "Test")
 public class TurnAnalogTest extends OpMode {
 
   private AnalogInput turnAnalog;
+  // The left Axon's feedback; the CR turret's "turnanalog" is not fitted on this robot.
+  private String analogName = "";
   private CRServo turnServo;
   private double minVoltage = 3.3;
   private double maxVoltage = 0.0;
@@ -18,9 +21,10 @@ public class TurnAnalogTest extends OpMode {
   public void init() {
     org.firstinspires.ftc.teamcode.robot.config.generated.config.reload();
     org.firstinspires.ftc.teamcode.utilities.OpModeUtil.reportConfig(telemetry);
+    analogName = config.turret_servo_test.left_analog_name;
 
     try {
-      turnAnalog = hardwareMap.get(AnalogInput.class, "turnanalog");
+      turnAnalog = hardwareMap.get(AnalogInput.class, analogName);
     } catch (Exception ignored) {
     }
 
@@ -31,9 +35,9 @@ public class TurnAnalogTest extends OpMode {
 
     telemetry.addLine("=== TURN ANALOG SERVO TESTER ===");
     if (turnAnalog != null) {
-      telemetry.addLine("AnalogInput 'turnanalog' connected");
+      telemetry.addLine("AnalogInput '" + analogName + "' connected");
     } else {
-      telemetry.addLine("ERROR: AnalogInput 'turnanalog' NOT FOUND in Hardware Map!");
+      telemetry.addLine("ERROR: AnalogInput '" + analogName + "' NOT FOUND in Hardware Map!");
     }
     if (turnServo != null) {
       telemetry.addLine("CRServo 'turn' detected - pull triggers to drive servo");
@@ -49,7 +53,7 @@ public class TurnAnalogTest extends OpMode {
   public void loop() {
     if (turnAnalog == null) {
       telemetry.addLine("=== ERROR: MISSING ANALOG INPUT ===");
-      telemetry.addLine("Configure AnalogInput 'turnanalog' on Expansion Hub!");
+      telemetry.addLine("Configure AnalogInput '" + analogName + "' on Expansion Hub!");
       telemetry.update();
       return;
     }
@@ -90,7 +94,7 @@ public class TurnAnalogTest extends OpMode {
                   .max_power_output);
     }
 
-    telemetry.addLine("=== ANALOG INPUT: 'turnanalog' ===");
+    telemetry.addLine("=== ANALOG INPUT: '" + analogName + "' ===");
     telemetry.addData("Raw Voltage", String.format("%.3f V / 3.300 V", rawVoltage));
     telemetry.addData(
         "Normalized Position", String.format("%.4f (0.0 to 1.0)", normalizedPosition));

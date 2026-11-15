@@ -5,7 +5,6 @@ import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
 import org.firstinspires.ftc.teamcode.records.CellTarget;
-import org.firstinspires.ftc.teamcode.robot.Shooter;
 import org.firstinspires.ftc.teamcode.robot.Turret;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 import org.firstinspires.ftc.teamcode.utilities.Casablanca;
@@ -19,10 +18,11 @@ import org.firstinspires.ftc.teamcode.utilities.Casablanca;
  * stick cancels a hold.
  *
  * <p>Operator: A intake, B stop intake, dpad right (hold) eject, right trigger (hold)
- * aim-and-shoot, Y (hold) turret aim, X (hold) rev, dpad up fixed-power shot, left trigger cancels
+ * aim-and-shoot, Y (hold) turret aim, X (hold) rev, dpad up raises the flap, left trigger cancels
  * everything, dpad down (hold) vision relocalize, left bumper records a TIP the camera missed, back
  * undoes one, right bumper toggles POLLEN/NECTAR shot tables (only while {@code
- * shooter.shot_table.nectar_enabled}), left stick button marks the robot empty.
+ * shooter.shot_table.nectar_enabled}), left stick button marks the robot empty. Operator D-pad left
+ * toggles the flower flap DOWN/UP from its last command; right-stick click explicitly raises it.
  */
 @Configurable
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "TeleOp", group = "!")
@@ -34,10 +34,11 @@ public class TeleOp extends TeleOpBase {
   private Command shootPoseCommand;
   private Command flowerPoseCommand;
   private Command intakeCommand;
+  private Command flapToggleCommand;
+  private Command flapUpCommand;
   private Command ejectCommand;
   private Command aimAndShootCommand;
   private Command aimCommand;
-  private Command shootManualCommand;
   private Command manualRevCommand;
 
   /** Latched state of the driver's face-the-upward-CELL heading lock; toggled by driver X. */
@@ -57,8 +58,9 @@ public class TeleOp extends TeleOpBase {
     flowerPoseCommand =
         Command.build().setStart(() -> holdPoseIfClear(profile.flowerPose())).requiring(follower);
 
-    intakeCommand =
-        intake.runIntakeCommand(config.teleop.intake_power, config.teleop.transfer_power);
+    intakeCommand = intake.runIntakeCommand(config.teleop.intake_power);
+    flapToggleCommand = flap.toggleCommand();
+    flapUpCommand = flap.upCommand();
 
     ejectCommand = intake.ejectCommand(config.teleop.eject_power);
 
@@ -76,12 +78,6 @@ public class TeleOp extends TeleOpBase {
                   turret.setAimMode(Turret.AimMode.HOLD);
                 })
             .requiring(turret);
-
-    shootManualCommand =
-        Command.build()
-            .setStart(() -> shotController.startShot(Shooter.constantPower(), false))
-            .setEnd(interrupted -> shotController.stopShot())
-            .requiring(shooter, intake);
 
     // Flywheel only: intake ownership stays with intakeCommand.
     manualRevCommand =
@@ -106,6 +102,11 @@ public class TeleOp extends TeleOpBase {
   }
 
   private void handleOperator() {
+    if (operatorDpadUp.onTrue() || operatorRightStick.onTrue()) {
+      flapUpCommand.schedule();
+    } else if (operatorDpadLeft.onTrue()) {
+      flapToggleCommand.schedule();
+    }
     if (operatorA.onTrue()) {
       intakeCommand.schedule();
     }
@@ -142,17 +143,15 @@ public class TeleOp extends TeleOpBase {
       manualRevCommand.cancel();
     }
 
-    if (operatorDpadUp.onTrue()) {
-      shootManualCommand.schedule();
-    }
-
     if (operatorLeftTrigger.onTrue()) {
       aimAndShootCommand.cancel();
       aimCommand.cancel();
-      shootManualCommand.cancel();
       manualRevCommand.cancel();
       intakeCommand.cancel();
       ejectCommand.cancel();
+      flapToggleCommand.cancel();
+      flapUpCommand.cancel();
+      flap.stop();
     }
 
     // HIVE bookkeeping the camera may have missed. Each press changes the tracker's epoch, which

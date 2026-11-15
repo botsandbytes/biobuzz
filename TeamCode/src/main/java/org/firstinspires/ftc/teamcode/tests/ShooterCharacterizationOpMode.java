@@ -309,6 +309,14 @@ public class ShooterCharacterizationOpMode extends LinearOpMode {
         telemetry.addLine("  kick:");
         telemetry.addLine(String.format("    wheel_tau_sec: %.3f", step.tauSec()));
         telemetry.addLine(String.format("    sensor_lag_sec: %.3f", step.lagSec()));
+        telemetry.addLine(
+            String.format(
+                "  (standard error: tau %.3f s, lag %.1f ms)",
+                step.tauSigmaSec(), 1e3 * step.lagSigmaSec()));
+        if (!step.lagWithin(config.shooter.kick.kick_lag_margin_sec)) {
+          telemetry.addLine("!! The lag is not known to within shooter.kick.kick_lag_margin_sec:");
+          telemetry.addLine("!! run the step test again (or sample faster) before using it.");
+        }
       } else {
         telemetry.addLine("!! Step test failed, leave shooter.kick as it is: " + step.problem());
       }
