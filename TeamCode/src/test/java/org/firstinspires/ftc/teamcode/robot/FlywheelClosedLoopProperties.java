@@ -28,7 +28,8 @@ import org.firstinspires.ftc.teamcode.utilities.FlywheelDipDetector;
  *
  * <p>Every property runs with the recovery kick ({@code shooter.kick}) on or off. On, its wheel
  * time constant is the plant's off by up to 25% (the step test fits it to 3%; the rest is drift)
- * and its sensor lag the plant's off by up to 7.5 ms (the step test's bound, FlywheelStepFitTest).
+ * and its sensor lag the plant's off by up to 7.5 ms (kick_lag_margin_sec: the step test claims it
+ * only for a fit that pins the lag that well, and says so otherwise; FlywheelStepFitTest).
  */
 class FlywheelClosedLoopProperties {
   private final boolean savedFtcPid = config.shooter.use_ftc_pid;
