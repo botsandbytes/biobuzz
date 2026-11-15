@@ -265,7 +265,10 @@ public final class Robot {
     turret.setAimMode(Turret.AimMode.IDLE);
     turret.setEnabled(false);
     flap.stop();
-    update(); // Apply stop targets through the same subsystem writers, including Axon PWM disable.
-    vision.close();
+    try {
+      update(); // Apply stop targets through the subsystem writers, including Axon PWM disable.
+    } finally {
+      vision.close(); // A writer that throws on a hardware fault must not keep the camera.
+    }
   }
 }

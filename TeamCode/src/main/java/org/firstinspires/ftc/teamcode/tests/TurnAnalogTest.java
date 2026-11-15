@@ -5,11 +5,14 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
+import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 
 @TeleOp(name = "Turn Analog Test", group = "Test")
 public class TurnAnalogTest extends OpMode {
 
-  private AnalogInput turnAnalogLeft;
+  private AnalogInput turnAnalog;
+  // The left Axon's feedback; the CR turret's "turnanalog" is not fitted on this robot.
+  private String analogName = "";
   private CRServo turnServo;
   private double minVoltage = 3.3;
   private double maxVoltage = 0.0;
@@ -18,9 +21,10 @@ public class TurnAnalogTest extends OpMode {
   public void init() {
     org.firstinspires.ftc.teamcode.robot.config.generated.config.reload();
     org.firstinspires.ftc.teamcode.utilities.OpModeUtil.reportConfig(telemetry);
+    analogName = config.turret_servo_test.left_analog_name;
 
     try {
-      turnAnalogLeft = hardwareMap.get(AnalogInput.class, "turnAnalogLeft");
+      turnAnalog = hardwareMap.get(AnalogInput.class, analogName);
     } catch (Exception ignored) {
     }
 
@@ -30,10 +34,10 @@ public class TurnAnalogTest extends OpMode {
     }
 
     telemetry.addLine("=== TURN ANALOG SERVO TESTER ===");
-    if (turnAnalogLeft != null) {
-      telemetry.addLine("AnalogInput 'turnAnalogLeft' connected");
+    if (turnAnalog != null) {
+      telemetry.addLine("AnalogInput '" + analogName + "' connected");
     } else {
-      telemetry.addLine("ERROR: AnalogInput 'turnAnalogLeft' NOT FOUND in Hardware Map!");
+      telemetry.addLine("ERROR: AnalogInput '" + analogName + "' NOT FOUND in Hardware Map!");
     }
     if (turnServo != null) {
       telemetry.addLine("CRServo 'turn' detected - pull triggers to drive servo");
@@ -47,13 +51,13 @@ public class TurnAnalogTest extends OpMode {
   @SuppressLint("DefaultLocale")
   @Override
   public void loop() {
-    if (turnAnalogLeft == null) {
+    if (turnAnalog == null) {
       telemetry.addLine("=== ERROR: MISSING ANALOG INPUT ===");
-      telemetry.addLine("Configure AnalogInput 'turnAnalogLeft' on Expansion Hub!");
+      telemetry.addLine("Configure AnalogInput '" + analogName + "' on Expansion Hub!");
       telemetry.update();
       return;
     }
-    double rawVoltage = turnAnalogLeft.getVoltage();
+    double rawVoltage = turnAnalog.getVoltage();
     double normalizedPosition = rawVoltage / 3.3;
     double degrees = normalizedPosition * 360.0;
 
@@ -90,7 +94,7 @@ public class TurnAnalogTest extends OpMode {
                   .max_power_output);
     }
 
-    telemetry.addLine("=== ANALOG INPUT: 'turnAnalogLeft' ===");
+    telemetry.addLine("=== ANALOG INPUT: '" + analogName + "' ===");
     telemetry.addData("Raw Voltage", String.format("%.3f V / 3.300 V", rawVoltage));
     telemetry.addData(
         "Normalized Position", String.format("%.4f (0.0 to 1.0)", normalizedPosition));
