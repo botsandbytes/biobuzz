@@ -23,6 +23,7 @@ public final class config {
   public static Casablanca casablanca;
   public static Shooter shooter;
   public static Auto auto;
+  public static Intake intake;
   public static Flap flap;
   public static Teleop teleop;
   public static AgentBridge agent_bridge;
@@ -356,6 +357,9 @@ public final class config {
   public static boolean AUTO_CELL_A_COLLECT_FLOWER;
   public static boolean AUTO_CELL_A_SECOND_VOLLEY;
   public static boolean AUTO_CELL_B_COLLECT_FLOWER;
+  public static String INTAKE_TRANSFER_SERVO_NAME;
+  public static double INTAKE_TRANSFER_POWER;
+  public static boolean INTAKE_TRANSFER_REVERSED;
   public static boolean FLAP_ENABLED;
   public static String FLAP_SERVO_NAME;
   public static double FLAP_PWM_LOWER_US;
@@ -418,6 +422,7 @@ public final class config {
     casablanca = ConfigLoader.load(Casablanca.class, "casablanca");
     shooter = ConfigLoader.load(Shooter.class, "shooter");
     auto = ConfigLoader.load(Auto.class, "auto");
+    intake = ConfigLoader.load(Intake.class, "intake");
     flap = ConfigLoader.load(Flap.class, "flap");
     teleop = ConfigLoader.load(Teleop.class, "teleop");
     agent_bridge = ConfigLoader.load(AgentBridge.class, "agent_bridge");
@@ -754,6 +759,9 @@ public final class config {
     AUTO_CELL_A_COLLECT_FLOWER = auto.cell_a_collect_flower;
     AUTO_CELL_A_SECOND_VOLLEY = auto.cell_a_second_volley;
     AUTO_CELL_B_COLLECT_FLOWER = auto.cell_b_collect_flower;
+    INTAKE_TRANSFER_SERVO_NAME = intake.transfer_servo_name;
+    INTAKE_TRANSFER_POWER = intake.transfer_power;
+    INTAKE_TRANSFER_REVERSED = intake.transfer_reversed;
     FLAP_ENABLED = flap.enabled;
     FLAP_SERVO_NAME = flap.servo_name;
     FLAP_PWM_LOWER_US = flap.pwm_lower_us;
@@ -2748,6 +2756,24 @@ public final class config {
      * volley.
      */
     public boolean cell_b_collect_flower;
+  }
+
+  public static final class Intake {
+    /**
+     * Continuous-rotation intake transfer servo hardware name; configured on Control Hub servo port
+     * 5.
+     */
+    public String transfer_servo_name;
+
+    /**
+     * Transfer servo power while the shooter target is positive, including spin-up. Independent of
+     * intake collection, feed gates, eject, and inventory cap; zero when shooter is stopped or
+     * transfer is manually stopped. Minimum: 0.0 Maximum: 1.0
+     */
+    public double transfer_power;
+
+    /** Reverse the intake transfer servo's direction to match the mechanism's mounting. */
+    public boolean transfer_reversed;
   }
 
   public static final class Flap {

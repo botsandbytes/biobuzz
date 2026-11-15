@@ -5,8 +5,10 @@ import static org.mockito.Mockito.*;
 
 import com.pedropathing.math.Pose;
 import com.pedropathing.math.Velocity;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import java.util.concurrent.atomic.AtomicReference;
 import org.firstinspires.ftc.teamcode.game.FieldModel;
 import org.firstinspires.ftc.teamcode.game.HiveTracker;
 import org.firstinspires.ftc.teamcode.records.Alliance;
@@ -22,10 +24,20 @@ class ShotTimingFeedTest {
     config.shooter.shot_table.calibrated = false;
     HardwareMap map = mock(HardwareMap.class);
     DcMotorEx motor = mock(DcMotorEx.class);
+    CRServo transfer = mock(CRServo.class);
     when(map.get(DcMotorEx.class, "rightIntake")).thenReturn(motor);
-    Intake intake = new Intake(map);
+    when(map.get(CRServo.class, config.intake.transfer_servo_name)).thenReturn(transfer);
     Shooter shooter = mock(Shooter.class);
-    when(shooter.getTargetPower()).thenReturn(Shooter.constantPower());
+    AtomicReference<Double> shooterTarget = new AtomicReference<>(0.0);
+    doAnswer(
+            call -> {
+              shooterTarget.set(call.getArgument(0));
+              return null;
+            })
+        .when(shooter)
+        .setTargetPower(anyDouble());
+    when(shooter.getTargetPower()).thenAnswer(call -> shooterTarget.get());
+    Intake intake = new Intake(map, shooter::getTargetPower);
     Turret turret = mock(Turret.class);
     when(turret.isEnabled()).thenReturn(true);
     when(turret.isAimed(any())).thenReturn(false);
@@ -46,32 +58,36 @@ class ShotTimingFeedTest {
       controller.periodic();
       intake.periodic();
       verify(motor).setPower(0);
+      verify(transfer).setPower(config.intake.transfer_power);
       assertFalse(controller.isFeedCommanded());
 
       when(shooter.getShooterVelocity()).thenReturn(config.shooter.constant_rpm);
-      clearInvocations(motor);
+      clearInvocations(motor, transfer);
       controller.periodic();
       intake.periodic();
       assertEquals(bench, controller.isFeedCommanded());
       verify(motor).setPower(bench ? config.shooter.feed_intake_power : 0);
+      verify(transfer).setPower(config.intake.transfer_power);
       if (bench) {
         assertEquals(Intake.Mode.FEED, intake.mode());
         verify(turret, never()).setAimMode(Turret.AimMode.AIM_AT_TARGET);
       }
 
       when(shooter.getShooterVelocity()).thenReturn(0.0);
-      clearInvocations(motor);
+      clearInvocations(motor, transfer);
       controller.periodic();
       intake.periodic();
       verify(motor).setPower(0);
+      verify(transfer).setPower(config.intake.transfer_power);
       assertFalse(controller.isFeedCommanded());
 
       controller.stopShot();
       when(shooter.getShooterVelocity()).thenReturn(config.shooter.constant_rpm);
-      clearInvocations(motor);
+      clearInvocations(motor, transfer);
       controller.periodic();
       intake.periodic();
       verify(motor).setPower(0);
+      verify(transfer).setPower(0);
       verify(shooter).setTargetPower(0);
     } finally {
       controller.shutdown();

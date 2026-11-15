@@ -2,21 +2,23 @@ package org.firstinspires.ftc.teamcode.robot;
 
 import androidx.annotation.Nullable;
 import com.pedropathing.ivy.Command;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import java.util.Locale;
+import java.util.function.DoubleSupplier;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 import org.firstinspires.ftc.teamcode.utilities.BallInventory;
 
 /**
- * Single-motor intake and feed mechanism, plus the G407 four-element inventory.
+ * Intake motor, shooter-following transfer servo, and G407 four-element inventory.
  *
  * <p>Single writer: commands, {@link ShotController} and OpModes set a target with {@link #run},
- * {@link #feed}, {@link #eject} or {@link #stop}; only {@link #periodic()} writes motor power. That
- * is where the inventory cap is applied, so no caller can drive a fifth SCORING ELEMENT in by
+ * {@link #feed}, {@link #eject} or {@link #stop}; only {@link #periodic()} writes actuator power.
+ * That is where the inventory cap is applied, so no caller can drive a fifth SCORING ELEMENT in by
  * accident.
  */
 public class Intake {
@@ -30,15 +32,20 @@ public class Intake {
   }
 
   private final DcMotorEx rightIntake;
+  private final CRServo intakeTransfer;
+  private final DoubleSupplier shooterTargetPower;
   private final @Nullable DigitalChannel entrySensor;
   private final BallInventory inventory;
 
   private Mode mode = Mode.STOPPED;
   private double targetPower = 0.0;
   private boolean blockedByCapacity = false;
+  private boolean transferStopped = false;
 
-  public Intake(HardwareMap hardwareMap) {
+  public Intake(HardwareMap hardwareMap, DoubleSupplier shooterTargetPower) {
+    this.shooterTargetPower = shooterTargetPower;
     rightIntake = hardwareMap.get(DcMotorEx.class, "rightIntake");
+    intakeTransfer = hardwareMap.get(CRServo.class, config.intake.transfer_servo_name);
 
     rightIntake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
@@ -66,14 +73,37 @@ public class Intake {
     setTarget(Mode.FEED, power);
   }
 
-  /** Reverse everything to spit out a fifth element (G407) or opponent NECTAR (G408). */
+  /** Reverse the intake roller to spit out a fifth element (G407) or opponent NECTAR (G408). */
   public void eject(double power) {
     double reverse = -Math.abs(power);
     setTarget(Mode.EJECT, reverse);
   }
 
+  /** Stop the intake motor. The transfer independently follows the shooter's target. */
   public void stop() {
     setTarget(Mode.STOPPED, 0.0);
+  }
+
+  /**
+   * Stop only the transfer, leaving intake and shooter targets unchanged. Latched until
+   * resumeTransfer().
+   */
+  public void stopTransfer() {
+    transferStopped = true;
+  }
+
+  /** Resume following the shooter; the transfer stays off while the shooter target is zero. */
+  public void resumeTransfer() {
+    transferStopped = false;
+  }
+
+  public String getTransferStatus() {
+    return String.format(
+        Locale.ROOT,
+        "%s; command %.2f; port %d",
+        transferStopped ? "Stopped by operator/path" : "Following shooter",
+        intakeTransfer.getPower(),
+        intakeTransfer.getPortNumber());
   }
 
   private void setTarget(Mode newMode, double power) {
@@ -114,7 +144,7 @@ public class Intake {
     return BallInventory.mayCollect(inventory.isKnown(), inventory.count(), inventory.capacity());
   }
 
-  /** The only place intake motor power is written. Called once per loop by Robot.update(). */
+  /** The only place intake motor/servo power is written. Called once per loop by Robot.update(). */
   public void periodic() {
     if (entrySensor != null) {
       boolean raw = entrySensor.getState();
@@ -131,6 +161,15 @@ public class Intake {
     blockedByCapacity = mode == Mode.COLLECT && !mayCollect();
     boolean powered = mode != Mode.STOPPED && !blockedByCapacity;
     rightIntake.setPower(powered ? targetPower : 0.0);
+    intakeTransfer.setDirection(
+        config.intake.transfer_reversed
+            ? DcMotorSimple.Direction.REVERSE
+            : DcMotorSimple.Direction.FORWARD);
+    double shooterPower = shooterTargetPower.getAsDouble();
+    intakeTransfer.setPower(
+        !transferStopped && Double.isFinite(shooterPower) && shooterPower > 0.0
+            ? config.intake.transfer_power
+            : 0.0);
   }
 
   public Command runIntakeCommand(double power) {
