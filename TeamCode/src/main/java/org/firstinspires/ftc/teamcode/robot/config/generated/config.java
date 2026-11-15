@@ -2784,8 +2784,9 @@ public final class config {
     public double up_angle_deg;
 
     /**
-     * Flap DOWN shaft-angle target within servo_range_deg. The difference from up_angle_deg sets
-     * the travel, nominally 180 degrees. Minimum: 0.0 Maximum: 360.0
+     * Flap DOWN nominal shaft-angle command within servo_range_deg. Actual travel depends on the
+     * servo's programmed sweep and linkage; verify clearance when increasing this target. Minimum:
+     * 0.0 Maximum: 360.0
      */
     public double down_angle_deg;
 

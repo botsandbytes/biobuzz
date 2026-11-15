@@ -95,6 +95,7 @@ public abstract class TeleOpBase extends OpMode {
   protected ButtonTracker operatorRightBumper = new ButtonTracker();
   protected ButtonTracker operatorBack = new ButtonTracker();
   protected ButtonTracker operatorLeftStick = new ButtonTracker();
+  protected ButtonTracker operatorRightStick = new ButtonTracker();
 
   protected ButtonTracker driverX = new ButtonTracker();
   protected ButtonTracker driverDpadLeft = new ButtonTracker();
@@ -236,7 +237,9 @@ public abstract class TeleOpBase extends OpMode {
     }
 
     telemetry.addData("Flower flap", flap.status());
-    telemetry.addLine("Gamepad 2 D-pad left: flap DOWN / UP toggle");
+    telemetry.addData("Flap positions (0-1)", flap.positionStatus());
+    telemetry.addLine(
+        "Gamepad 2 D-pad up: flap UP; D-pad left: flap toggle; right-stick click: UP");
     telemetry.addData("Alliance", profile.alliance());
     if (allianceUnconfirmed) {
       telemetry.addLine("!! No fresh handoff: confirm alliance. Press B = RED, X = BLUE.");
@@ -272,6 +275,7 @@ public abstract class TeleOpBase extends OpMode {
     operatorRightBumper.update(operator.right_bumper);
     operatorBack.update(operator.back);
     operatorLeftStick.update(operator.left_stick_button);
+    operatorRightStick.update(operator.right_stick_button);
 
     driverX.update(driver.x);
     driverDpadLeft.update(driver.dpad_left);
@@ -407,7 +411,8 @@ public abstract class TeleOpBase extends OpMode {
     if (parkAlertActive) {
       telemetryM.addLine("!!!!!!!!!! PARK NOW !!!!!!!!!!");
     }
-    telemetryM.addData("Flower flap (operator D-pad left)", flap.status());
+    telemetryM.addData("Flower flap (D-pad up: UP; left: toggle)", flap.status());
+    telemetryM.addData("Flap positions (0-1)", flap.positionStatus());
     telemetryM.addData("Alliance", profile.alliance());
     telemetryM.addData(
         "Time left",
