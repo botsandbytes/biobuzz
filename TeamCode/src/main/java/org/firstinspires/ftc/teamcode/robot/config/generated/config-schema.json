@@ -4704,6 +4704,38 @@
         "cell_b_collect_flower"
       ]
     },
+    "intake": {
+      "type": "object",
+      "properties": {
+        "transfer_servo_name": {
+          "description": "Continuous-rotation intake transfer servo hardware name; configured on Control Hub servo port 5.",
+          "type": "string"
+        },
+        "transfer_power": {
+          "description": "Transfer servo power while the shooter target is positive, including spin-up. Independent of intake collection, feed gates, eject, and inventory cap; zero when shooter is stopped or transfer is manually stopped.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "transfer_reversed": {
+          "description": "Reverse the intake transfer servo's direction to match the mechanism's mounting.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "transfer_servo_name",
+        "transfer_power",
+        "transfer_reversed"
+      ]
+    },
     "flap": {
       "type": "object",
       "properties": {
@@ -5570,6 +5602,7 @@
     "casablanca",
     "shooter",
     "auto",
+    "intake",
     "flap",
     "teleop",
     "auto_poses",

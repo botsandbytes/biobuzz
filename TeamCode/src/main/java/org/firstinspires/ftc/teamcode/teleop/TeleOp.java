@@ -15,12 +15,12 @@ import org.firstinspires.ftc.teamcode.utilities.Casablanca;
  * <p>Driver: sticks drive; X toggles facing the upward CELL; right trigger holds the shooting pose
  * for whichever CELL is up; left trigger holds the LOADING ZONE park pose; dpad left holds the
  * side-wall FLOWER pickup pose (only while {@code teleop.flower_hold_enabled}); dpad right or any
- * stick cancels a hold.
+ * stick cancels a hold. B stops only the intake transfer servo.
  *
  * <p>Operator: A intake, B stop intake, dpad right (hold) eject, right trigger (hold)
- * aim-and-shoot, Y (hold) turret aim, X (hold) rev, dpad up raises the flap, left trigger cancels
- * everything, dpad down (hold) vision relocalize, left bumper records a TIP the camera missed, back
- * undoes one, right bumper toggles POLLEN/NECTAR shot tables (only while {@code
+ * aim-and-shoot, Y (hold) turret aim, X (hold) rev with transfer, dpad up raises the flap, left
+ * trigger cancels everything, dpad down (hold) vision relocalize, left bumper records a TIP the
+ * camera missed, back undoes one, right bumper toggles POLLEN/NECTAR shot tables (only while {@code
  * shooter.shot_table.nectar_enabled}), left stick button marks the robot empty. Operator D-pad left
  * toggles the flower flap DOWN/UP from its last command; right-stick click explicitly raises it.
  */
@@ -79,7 +79,7 @@ public class TeleOp extends TeleOpBase {
                 })
             .requiring(turret);
 
-    // Flywheel only: intake ownership stays with intakeCommand.
+    // Shooter target also drives the transfer; intake roller ownership stays with intakeCommand.
     manualRevCommand =
         Command.build()
             .setStart(() -> shooter.setTargetPower(config.teleop.manual_rev_power))
@@ -123,6 +123,7 @@ public class TeleOp extends TeleOpBase {
     }
 
     if (operatorRightTrigger.onTrue()) {
+      intake.resumeTransfer();
       aimAndShootCommand.schedule();
     }
     if (operatorRightTrigger.onFalse()) {
@@ -137,6 +138,7 @@ public class TeleOp extends TeleOpBase {
     }
 
     if (operatorX.onTrue()) {
+      intake.resumeTransfer();
       manualRevCommand.schedule();
     }
     if (operatorX.onFalse()) {
@@ -173,6 +175,9 @@ public class TeleOp extends TeleOpBase {
   }
 
   private void handleDriver() {
+    if (driverB.onTrue()) {
+      intake.stopTransfer();
+    }
     if (driverLeftTrigger.onTrue()) {
       parkCommand.schedule();
     }

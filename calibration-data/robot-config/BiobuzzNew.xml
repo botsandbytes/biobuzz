@@ -15,6 +15,7 @@
             <goBILDA5202SeriesMotor name="rightFront" port="2" />
             <goBILDA5202SeriesMotor name="rightBack" port="3" />
             <Servo name="turnservo2" port="1" />
+            <ContinuousRotationServo name="intakeTransfer" port="5" />
             <goBILDAPinpoint name="pinpoint" port="0" bus="1" />
             <ControlHubImuBHI260AP name="imu" port="0" bus="0" />
         </LynxModule>

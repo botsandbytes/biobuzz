@@ -544,6 +544,12 @@ auto:
   cell_a_second_volley: true
   cell_b_collect_flower: false
 
+intake:
+  transfer_servo_name: "intakeTransfer" # Continuous Rotation Servo, Control Hub servo port 5.
+  # Follows the shooter target, independently of the intake roller and its inventory cap.
+  transfer_power: 1.0
+  transfer_reversed: false
+
 # Axon MK2 flower flap, used only by TeleOp. No command at INIT/START until the first toggle.
 flap:
   enabled: true

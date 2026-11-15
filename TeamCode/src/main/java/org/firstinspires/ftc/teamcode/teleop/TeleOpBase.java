@@ -98,6 +98,7 @@ public abstract class TeleOpBase extends OpMode {
   protected ButtonTracker operatorRightStick = new ButtonTracker();
 
   protected ButtonTracker driverX = new ButtonTracker();
+  protected ButtonTracker driverB = new ButtonTracker();
   protected ButtonTracker driverDpadLeft = new ButtonTracker();
   protected ButtonTracker driverDpadRight = new ButtonTracker();
   protected ButtonTracker driverRightTrigger = new ButtonTracker();
@@ -237,6 +238,8 @@ public abstract class TeleOpBase extends OpMode {
     }
 
     telemetry.addData("Flower flap", flap.status());
+    telemetry.addLine(
+        "Gamepad 2 X: shooter + transfer; A/B: intake only; gamepad 1 B: stop transfer only");
     telemetry.addData("Flap positions (0-1)", flap.positionStatus());
     telemetry.addLine(
         "Gamepad 2 D-pad up: flap UP; D-pad left: flap toggle; right-stick click: UP");
@@ -278,6 +281,7 @@ public abstract class TeleOpBase extends OpMode {
     operatorRightStick.update(operator.right_stick_button);
 
     driverX.update(driver.x);
+    driverB.update(driver.b);
     driverDpadLeft.update(driver.dpad_left);
     driverDpadRight.update(driver.dpad_right);
     driverRightTrigger.update(driver.right_trigger > 0.5);
@@ -482,6 +486,8 @@ public abstract class TeleOpBase extends OpMode {
     telemetryM.addData("shooter motor", shooter.getFirstMotorStatus());
     telemetryM.addData("shooter2 motor", shooter.getSecondMotorStatus());
     telemetryM.addData("rightIntake motor", intake.getMotorStatus());
+    telemetryM.addData(
+        "intakeTransfer (driver B stops; operator X resumes)", intake.getTransferStatus());
     telemetryM.addData("Pose", follower.pose());
     telemetryM.addData("Pose assist", driveAssistStatus);
     if (!relocalizeStatus.isEmpty()) {

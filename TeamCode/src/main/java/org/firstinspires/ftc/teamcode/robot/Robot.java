@@ -125,8 +125,8 @@ public final class Robot {
     hive = HiveTracker.fromConfig(Robot::nowMs);
 
     flap = new FlowerFlap(hardwareMap, forTeleOp);
-    intake = new Intake(hardwareMap);
     shooter = new Shooter(hardwareMap);
+    intake = new Intake(hardwareMap, shooter::getTargetPower);
     turret = new Turret(hardwareMap, telemetry, follower::pose, follower::velocity);
 
     sentinel = new Sentinel(field);
