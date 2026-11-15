@@ -9,6 +9,7 @@ import org.apache.commons.math3.fitting.leastsquares.MultivariateJacobianFunctio
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
+import org.apache.commons.math3.linear.SingularMatrixException;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.Pair;
@@ -26,6 +27,12 @@ import org.apache.commons.math3.util.Pair;
  * <p>The dead time is everything between the power write and the reading moving: the hub write,
  * motor current rise and the hub's velocity window. That is exactly what the recovery kick ({@code
  * shooter.kick.sensor_lag_sec}) runs its model forward over. Pure math, unit tested on the JVM.
+ *
+ * <p>The refined fit also reports the standard error of each value, from its covariance and the
+ * residual noise. One step only pins the lag so well: a slow wheel (tau 1 s) sampled every 10 ms
+ * through 15 ticks/s of noise has a 3.6 ms standard error, so the lag can land more than {@code
+ * shooter.kick.kick_lag_margin_sec} off. {@link Result#lagWithin} says whether it is known well
+ * enough for a margin, so a caller can say so instead of trusting it.
  */
 public final class FlywheelStepFit {
   private FlywheelStepFit() {}
@@ -53,6 +60,12 @@ public final class FlywheelStepFit {
   /** Readings this many robust standard deviations off the first guess are left out. */
   static final double OUTLIER_SIGMAS = 5.0;
 
+  /**
+   * Standard errors a value must be within a margin by for {@link Result#lagWithin}: with the fit's
+   * errors close to normal, 5 leaves about one fit in a million outside the margin it claims.
+   */
+  public static final double CONFIDENCE_SIGMAS = 5.0;
+
   /** The first-order-plus-dead-time step response at time t. */
   static double response(double t, double v0, double span, double tau, double lag) {
     return t <= lag ? v0 : v0 + span * (1.0 - Math.exp(-(t - lag) / tau));
@@ -61,11 +74,28 @@ public final class FlywheelStepFit {
   /**
    * @param tauSec time constant, NaN when the fit failed
    * @param lagSec dead time, at least 0, NaN when the fit failed
+   * @param tauSigmaSec standard error of tauSec, NaN when not known
+   * @param lagSigmaSec standard error of lagSec, NaN when not known
    * @param problem why the fit failed, null when it did not
    */
-  public record Result(double tauSec, double lagSec, @Nullable String problem) {
+  public record Result(
+      double tauSec,
+      double lagSec,
+      double tauSigmaSec,
+      double lagSigmaSec,
+      @Nullable String problem) {
     public boolean valid() {
       return problem == null;
+    }
+
+    /** Whether the lag is known to within {@code marginSec}, {@link #CONFIDENCE_SIGMAS} over. */
+    public boolean lagWithin(double marginSec) {
+      return valid() && CONFIDENCE_SIGMAS * lagSigmaSec <= marginSec;
+    }
+
+    /** Whether tau is known to within {@code fraction} of itself, as {@link #lagWithin}. */
+    public boolean tauWithin(double fraction) {
+      return valid() && CONFIDENCE_SIGMAS * tauSigmaSec <= fraction * tauSec;
     }
   }
 
@@ -129,7 +159,7 @@ public final class FlywheelStepFit {
       n++;
     }
     if (n < MIN_SAMPLES) {
-      return new Result(tau0, lag0, null);
+      return estimate(tau0, lag0);
     }
     // Drop outliers (a glitched reading) against the line's model: more than OUTLIER_SIGMAS robust
     // standard deviations (1.4826 x the median absolute residual) off. Squared error lets one
@@ -151,7 +181,7 @@ public final class FlywheelStepFit {
       }
     }
     if (kept < MIN_SAMPLES) {
-      return new Result(tau0, lag0, null);
+      return estimate(tau0, lag0);
     }
     times = java.util.Arrays.copyOf(times, kept);
     observed = java.util.Arrays.copyOf(observed, kept);
@@ -187,12 +217,31 @@ public final class FlywheelStepFit {
       double tau = optimum.getPoint().getEntry(0);
       double lag = optimum.getPoint().getEntry(1);
       if (!(tau > 0.0) || !Double.isFinite(lag) || !(lag < end)) {
-        return new Result(tau0, lag0, null);
+        return estimate(tau0, lag0);
       }
-      return new Result(tau, Math.max(0.0, lag), null);
+      // Standard errors: the covariance's diagonal scaled by the residual noise (cost is the root
+      // of the sum of squared residuals; two parameters were fitted).
+      double tauSigma = Double.NaN;
+      double lagSigma = Double.NaN;
+      if (observed.length > 2) {
+        try {
+          double[] unscaled = optimum.getSigma(1e-12).toArray();
+          double noise = optimum.getCost() / Math.sqrt(observed.length - 2);
+          tauSigma = unscaled[0] * noise;
+          lagSigma = unscaled[1] * noise;
+        } catch (SingularMatrixException e) {
+          // Degenerate covariance: the values stand, their precision is unknown.
+        }
+      }
+      return new Result(tau, Math.max(0.0, lag), tauSigma, lagSigma, null);
     } catch (MathIllegalStateException e) {
-      return new Result(tau0, lag0, null);
+      return estimate(tau0, lag0);
     }
+  }
+
+  /** The line's first guess, used when the refined fit cannot run: its precision is unknown. */
+  private static Result estimate(double tau, double lag) {
+    return new Result(tau, lag, Double.NaN, Double.NaN, null);
   }
 
   /**
@@ -213,6 +262,6 @@ public final class FlywheelStepFit {
   }
 
   private static Result failed(String why) {
-    return new Result(Double.NaN, Double.NaN, why);
+    return new Result(Double.NaN, Double.NaN, Double.NaN, Double.NaN, why);
   }
 }

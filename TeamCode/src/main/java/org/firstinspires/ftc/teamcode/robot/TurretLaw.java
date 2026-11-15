@@ -4,7 +4,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /**
  * Every decision {@link Turret} makes, as pure functions of numbers: no config, hardware, clock or
- * state. {@link Turret} reads those, calls these, and writes the servo.
+ * state. {@link Turret} reads those, calls these, and writes the servo. The {@code axon*} methods
+ * are the same for the positional backend ({@link DualPositionTurret}).
  *
  * <p>The JML contracts ({@code //@} and {@code /*@} comments) are proven against this exact code by
  * OpenJML: {@code ./gradlew verifyTurret}. They are ordinary comments to javac, so the robot runs
@@ -441,5 +442,249 @@ final class TurretLaw {
     }
     double limited = limit(requested, maxPower);
     return Double.isFinite(limited) ? limited : 0.0;
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Positional Axon backend (turret.dual_position). The two Axons close their own shaft loops, so
+  // none of the CR control law above applies; what is decided here is whether their feedback is
+  // believed, where they are pointed, whether PWM may be on, and the aim claim.
+
+  /** Turret degrees per unit of servo position: the shaft sweep through the gear ratio, signed. */
+  /*@ normal_behavior
+  @   requires Double.isFinite(sweepDeg) && Double.isFinite(servoTeeth);
+  @   requires Double.isFinite(turretTeeth) && turretTeeth > 0;
+  @   ensures positiveCcw ==> \result == sweepDeg * servoTeeth / turretTeeth;
+  @   ensures !positiveCcw ==> \result == -(sweepDeg * servoTeeth / turretTeeth);
+  @ also normal_behavior
+  @   ensures true;
+  @ pure
+  @*/
+  static double axonDegreesPerPosition(
+      double sweepDeg, double servoTeeth, double turretTeeth, boolean positiveCcw) {
+    double magnitude = sweepDeg * servoTeeth / turretTeeth;
+    return positiveCcw ? magnitude : -magnitude;
+  }
+
+  /** Whether an Axon feedback voltage is inside the analog input's range. NaN is not. */
+  /*@ normal_behavior
+  @   ensures \result <==> volts > 0 && volts < fullScale;
+  @   ensures \result ==> Double.isFinite(volts);
+  @ pure
+  @*/
+  static boolean axonFeedbackValid(double volts, double fullScale) {
+    return volts > 0 && volts < fullScale;
+  }
+
+  /**
+   * Turret angle one Axon's feedback says: its offset from the reference voltage, in servo
+   * positions, signed and scaled. NaN when the voltage is outside the analog range, so an unplugged
+   * or shorted feedback wire can never contribute to an angle or an aim claim.
+   */
+  /*@ normal_behavior
+  @   ensures !axonFeedbackValid(volts, fullScale) ==> Double.isNaN(\result);
+  @ also normal_behavior
+  @   requires axonFeedbackValid(volts, fullScale) && fullScale <= 10;
+  @   requires Double.isFinite(referenceVolts) && Math.abs(referenceVolts) <= 10;
+  @   requires Double.isFinite(voltsPerPosition) && voltsPerPosition >= 0.001;
+  @   requires Double.isFinite(degreesPerPosition) && Math.abs(degreesPerPosition) <= 1000;
+  @   ensures !reversed
+  @           ==> \result == (volts - referenceVolts) / voltsPerPosition * degreesPerPosition;
+  @   ensures reversed
+  @           ==> \result == -((volts - referenceVolts) / voltsPerPosition) * degreesPerPosition;
+  @ also normal_behavior
+  @   ensures true;
+  @ pure
+  @*/
+  static double axonAngle(
+      double volts,
+      double fullScale,
+      double referenceVolts,
+      double voltsPerPosition,
+      boolean reversed,
+      double degreesPerPosition) {
+    if (!axonFeedbackValid(volts, fullScale)) {
+      return Double.NaN;
+    }
+    double position = (volts - referenceVolts) / voltsPerPosition;
+    return (reversed ? -position : position) * degreesPerPosition;
+  }
+
+  /** The turret angle: the mean of the two shafts' angles, NaN unless both are known and ready. */
+  /*@ normal_behavior
+  @   ensures !ready || Double.isNaN(leftDeg) || Double.isNaN(rightDeg) ==> Double.isNaN(\result);
+  @   ensures ready && Double.isFinite(leftDeg) && Double.isFinite(rightDeg)
+  @           ==> \result == (leftDeg + rightDeg) / 2;
+  @ pure
+  @*/
+  static double axonMeanAngle(boolean ready, double leftDeg, double rightDeg) {
+    return ready ? (leftDeg + rightDeg) / 2 : Double.NaN;
+  }
+
+  /** Whether an angle is inside both the travel and the verified servo command window. */
+  /*@ normal_behavior
+  @   ensures \result <==> calibrated && Double.isFinite(degrees)
+  @           && Math.abs(degrees / degreesPerPosition) <= maxJog
+  @           && degrees >= min && degrees <= max;
+  @ pure
+  @*/
+  static boolean axonReachable(
+      boolean calibrated,
+      double degrees,
+      double degreesPerPosition,
+      double maxJog,
+      double min,
+      double max) {
+    return calibrated
+        && Double.isFinite(degrees)
+        && Math.abs(degrees / degreesPerPosition) <= maxJog
+        && degrees >= min
+        && degrees <= max;
+  }
+
+  /**
+   * The aim claim: PWM on, no fault, the target reachable, and BOTH shafts within tolerance of it.
+   * Each shaft is judged on its own, so opposite errors can never average into a claim. Holds for
+   * any input: a NaN shaft angle (see {@link #axonAngle}) is never aimed.
+   */
+  /*@ normal_behavior
+  @   ensures \result ==> active && !faulted;
+  @   ensures \result ==> axonReachable(calibrated, desired, degreesPerPosition, maxJog, min, max);
+  @   ensures \result ==> Double.isFinite(desired) && min <= desired && desired <= max;
+  @   ensures \result ==> Math.abs(desired - leftDeg) < tolerance
+  @           && Math.abs(desired - rightDeg) < tolerance;
+  @   ensures \result ==> !Double.isNaN(leftDeg) && !Double.isNaN(rightDeg);
+  @ pure
+  @*/
+  static boolean axonAimed(
+      double desired,
+      double leftDeg,
+      double rightDeg,
+      double tolerance,
+      boolean active,
+      boolean faulted,
+      boolean calibrated,
+      double degreesPerPosition,
+      double maxJog,
+      double min,
+      double max) {
+    return active
+        && !faulted
+        && axonReachable(calibrated, desired, degreesPerPosition, maxJog, min, max)
+        && Math.abs(desired - leftDeg) < tolerance
+        && Math.abs(desired - rightDeg) < tolerance;
+  }
+
+  /** Whether feedback that should be live by now (PWM on past the startup time) is missing. */
+  /*@ normal_behavior
+  @   ensures \result <==> active && enabledSec >= startupSec && !(leftValid && rightValid);
+  @ pure
+  @*/
+  static boolean axonFeedbackMissing(
+      boolean active, double enabledSec, double startupSec, boolean leftValid, boolean rightValid) {
+    return active && enabledSec >= startupSec && !(leftValid && rightValid);
+  }
+
+  /**
+   * Whether a running manual jog has to stop: the loop stalled, the clock went backwards, or PWM
+   * has been on for the enable limit. Written as "not inside", so a NaN anywhere stops it.
+   */
+  /*@ normal_behavior
+  @   ensures \result <==> active
+  @           && !(dtSec >= 0 && dtSec <= maxGapSec && enabledSec < maxEnableSec);
+  @ pure
+  @*/
+  static boolean axonManualTimedOut(
+      boolean active, double dtSec, double maxGapSec, double enabledSec, double maxEnableSec) {
+    return active && !(dtSec >= 0 && dtSec <= maxGapSec && enabledSec < maxEnableSec);
+  }
+
+  /** {@link #axonState} results; only the two DRIVE states power the servos. */
+  static final int AXON_OFF = 0;
+
+  static final int AXON_BLOCKED = 1;
+  static final int AXON_MANUAL_INVALID = 2;
+  static final int AXON_MANUAL_NEUTRAL = 3;
+  static final int AXON_MANUAL_REARM = 4;
+  static final int AXON_MANUAL_TIMEOUT = 5;
+  static final int AXON_MANUAL_DRIVE = 6;
+  static final int AXON_AIM_LOCKED = 7;
+  static final int AXON_AIM_INVALID = 8;
+  static final int AXON_AIM_DRIVE = 9;
+
+  /**
+   * The Axon output gate, as one state per loop. PWM may be on only when enabled, not IDLE, the
+   * config sane and no fault latched; then a manual jog needs a finite non-zero request, no pending
+   * re-arm and no timeout, and automatic aim needs a verified calibration and a finite target.
+   */
+  /*@ normal_behavior
+  @   ensures AXON_OFF <= \result && \result <= AXON_AIM_DRIVE;
+  @   ensures axonDrives(\result) ==> enabled && !idle && configOk && !faulted;
+  @   ensures \result == AXON_MANUAL_DRIVE ==> manual && Double.isFinite(manualPower)
+  @           && manualPower != 0 && !releaseRequired && !manualTimedOut;
+  @   ensures \result == AXON_AIM_DRIVE ==> !manual && calibrated && Double.isFinite(desired);
+  @ pure
+  @*/
+  static int axonState(
+      boolean enabled,
+      boolean idle,
+      boolean configOk,
+      boolean faulted,
+      boolean manual,
+      double manualPower,
+      boolean releaseRequired,
+      boolean manualTimedOut,
+      boolean calibrated,
+      double desired) {
+    if (!enabled || idle) {
+      return AXON_OFF;
+    }
+    if (!configOk || faulted) {
+      return AXON_BLOCKED;
+    }
+    if (manual) {
+      if (!Double.isFinite(manualPower)) {
+        return AXON_MANUAL_INVALID;
+      }
+      if (manualPower == 0) {
+        return AXON_MANUAL_NEUTRAL;
+      }
+      if (releaseRequired) {
+        return AXON_MANUAL_REARM;
+      }
+      return manualTimedOut ? AXON_MANUAL_TIMEOUT : AXON_MANUAL_DRIVE;
+    }
+    if (!calibrated) {
+      return AXON_AIM_LOCKED;
+    }
+    return Double.isFinite(desired) ? AXON_AIM_DRIVE : AXON_AIM_INVALID;
+  }
+
+  /** Whether an {@link #axonState} powers the servos. */
+  /*@ normal_behavior
+  @   ensures \result <==> state == AXON_MANUAL_DRIVE || state == AXON_AIM_DRIVE;
+  @ pure
+  @*/
+  static boolean axonDrives(int state) {
+    return state == AXON_MANUAL_DRIVE || state == AXON_AIM_DRIVE;
+  }
+
+  /** Servo offset for an automatic target: limited to the travel, then to +/-|{@code maxJog}|. */
+  /*@ normal_behavior
+  @   ensures !Double.isNaN(\result) ==> Math.abs(\result) <= Math.abs(maxJog);
+  @ pure
+  @*/
+  static double axonAimOffset(
+      double desired, double min, double max, double degreesPerPosition, double maxJog) {
+    return limit(toTravel(desired, min, max) / degreesPerPosition, maxJog);
+  }
+
+  /** Servo offset after one manual jog step: request limited to +/-1, result to the window. */
+  /*@ normal_behavior
+  @   ensures !Double.isNaN(\result) ==> Math.abs(\result) <= Math.abs(maxJog);
+  @ pure
+  @*/
+  static double axonManualOffset(
+      double offset, double manualPower, double positionPerSec, double dtSec, double maxJog) {
+    return limit(offset + limit(manualPower, 1.0) * positionPerSec * dtSec, maxJog);
   }
 }

@@ -69,20 +69,14 @@ public class TeleOp extends TeleOpBase {
 
     // Turret only, no flywheel. Aim (operator Y) and rev (operator X) are separate commands over
     // disjoint subsystems so holding both composes into aim-and-spin-up.
-    /*aimCommand =
-    Command.build()
-        .setStart(() -> turret.setAimMode(Turret.AimMode.AIM_AT_TARGET))
-        .setEnd(
-            interrupted -> {
-              turret.setHoldAngle(0.0);
-              turret.setAimMode(Turret.AimMode.HOLD);
-            })
-        .requiring(turret);*/
-
     aimCommand =
         Command.build()
             .setStart(() -> turret.setAimMode(Turret.AimMode.AIM_AT_TARGET))
-            .setEnd(interrupted -> turret.setAimMode(Turret.AimMode.AIM_AT_TARGET))
+            .setEnd(
+                interrupted -> {
+                  turret.setHoldAngle(0.0);
+                  turret.setAimMode(Turret.AimMode.HOLD);
+                })
             .requiring(turret);
 
     // Flywheel only: intake ownership stays with intakeCommand.
@@ -103,13 +97,6 @@ public class TeleOp extends TeleOpBase {
 
   @Override
   protected void onLoop() {
-    CellTarget target = shotController.currentTarget();
-    turret.setTargetPoint(target.x(), target.y());
-
-    if (!Scheduler.isScheduled(aimAndShootCommand)
-        && turret.getAimMode() != Turret.AimMode.AIM_AT_TARGET) {
-      turret.setAimMode(Turret.AimMode.AIM_AT_TARGET);
-    }
     handleOperator();
     handleDriver();
   }
