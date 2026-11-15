@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.ServoImplEx;
+import com.qualcomm.robotcore.util.Range;
 import java.util.Locale;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 
@@ -19,6 +20,7 @@ public final class FlowerFlap {
 
   private final @Nullable ServoImplEx servo;
   private Target target = Target.NONE;
+  private Target lastEndpoint = Target.UP;
 
   /** Non-TeleOp robots neither map nor write the flap hardware. */
   public FlowerFlap(HardwareMap hardwareMap, boolean forTeleOp) {
@@ -26,10 +28,27 @@ public final class FlowerFlap {
         forTeleOp && config.flap.enabled
             ? hardwareMap.get(ServoImplEx.class, config.flap.servo_name)
             : null;
+    if (servo != null && configurationProblem() == null) {
+      // Read the retained command without enabling PWM. The SDK can reset the PWM range at INIT,
+      // so compare pulse widths rather than comparing normalized positions from different ranges.
+      double position = servo.getPosition();
+      var range = servo.getPwmRange();
+      if (Double.isFinite(position) && range != null) {
+        if (servo.getDirection() == Servo.Direction.REVERSE) position = 1 - position;
+        double pulse = Range.scale(position, 0, 1, range.usPulseLower, range.usPulseUpper);
+        var c = config.flap;
+        double configuredPosition = Range.scale(pulse, c.pwm_lower_us, c.pwm_upper_us, 0, 1);
+        if (c.reversed) configuredPosition = 1 - configuredPosition;
+        double angle = configuredPosition * c.servo_range_deg;
+        if (Math.abs(angle - c.down_angle_deg) < Math.abs(angle - c.up_angle_deg)) {
+          lastEndpoint = Target.DOWN;
+        }
+      }
+    }
   }
 
   public void toggle() {
-    target = target == Target.DOWN ? Target.UP : Target.DOWN;
+    setTarget(lastEndpoint == Target.DOWN ? Target.UP : Target.DOWN);
   }
 
   public void stop() {
@@ -38,6 +57,7 @@ public final class FlowerFlap {
 
   public void setTarget(Target target) {
     this.target = target;
+    if (target != Target.NONE) lastEndpoint = target;
   }
 
   /** SDK command readback, not a measurement of the flap's physical angle. */
@@ -58,8 +78,28 @@ public final class FlowerFlap {
     return target;
   }
 
+  /** Configured endpoint limits and SDK command readback, in normalized servo units. */
+  public String positionStatus() {
+    String problem = configurationProblem();
+    if (problem != null) return problem;
+    var c = config.flap;
+    double up = c.up_angle_deg / c.servo_range_deg;
+    double down = c.down_angle_deg / c.servo_range_deg;
+    double current = servo == null ? Double.NaN : servo.getPosition();
+    return String.format(
+        Locale.ROOT,
+        "min %.3f; max %.3f; current %s (SDK command, not measured)",
+        Math.min(up, down),
+        Math.max(up, down),
+        Double.isFinite(current) ? String.format(Locale.ROOT, "%.3f", current) : "unavailable");
+  }
+
   public Command toggleCommand() {
     return Command.build().setStart(this::toggle).setDone(() -> true).requiring(this);
+  }
+
+  public Command upCommand() {
+    return Command.build().setStart(() -> setTarget(Target.UP)).setDone(() -> true).requiring(this);
   }
 
   public static @Nullable String configurationProblem() {
@@ -84,11 +124,12 @@ public final class FlowerFlap {
     if (servo == null || !config.flap.enabled) return "Disabled";
     String problem = configurationProblem();
     if (problem != null) return problem;
-    String state = target == Target.NONE ? "Unpowered; D-pad left lowers" : target + " target";
+    String state = target == Target.NONE ? "Unpowered" : target + " target";
     return String.format(
         Locale.ROOT,
-        "%s (UP %.0f / DOWN %.0f commanded deg)",
+        "%s; next toggle %s (UP %.0f / DOWN %.0f commanded deg; no position sensor)",
         state,
+        lastEndpoint == Target.DOWN ? Target.UP : Target.DOWN,
         config.flap.up_angle_deg,
         config.flap.down_angle_deg);
   }

@@ -21,6 +21,7 @@ public class FlowerFlapTestOpMode extends LinearOpMode {
         telemetry.addLine(
             "No movement at INIT/START. Hold A: backward/up; B: forward/down; release: off.");
         telemetry.addData("Flap", rig.flap.status());
+        telemetry.addData("Flap positions (0-1)", rig.flap.positionStatus());
         telemetry.update();
         idle();
       }
@@ -32,6 +33,7 @@ public class FlowerFlapTestOpMode extends LinearOpMode {
         rig.update();
         telemetry.addData("Flap", rig.flap.status());
         telemetry.addData("Command readback", rig.flap.outputStatus());
+        telemetry.addData("Flap positions (0-1)", rig.flap.positionStatus());
         telemetry.addLine(
             "Hold A: backward/up; B: forward/down; release: off. Physical angle is not measured.");
         telemetry.update();

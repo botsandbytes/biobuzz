@@ -68,6 +68,38 @@ class FlowerFlapControlsTest {
     op.onLoop();
     Scheduler.execute();
     assertEquals(FlowerFlap.Target.NONE, op.flap.target());
+    op.operatorLeftTrigger.update(false);
+    op.operatorDpadLeft.update(true);
+    op.onLoop();
+    Scheduler.execute();
+    assertEquals(FlowerFlap.Target.DOWN, op.flap.target());
+    op.operatorDpadLeft.update(false);
+    op.operatorRightStick.update(true);
+    op.onLoop();
+    Scheduler.execute();
+    assertEquals(FlowerFlap.Target.UP, op.flap.target());
+    op.operatorRightStick.update(false);
+    op.operatorDpadLeft.update(true);
+    op.operatorLeftTrigger.update(true);
+    op.onLoop();
+    Scheduler.execute();
+    assertEquals(FlowerFlap.Target.NONE, op.flap.target());
     verify(op.follower, never()).hold(any());
+
+    op.operatorLeftTrigger.update(false);
+    op.operatorDpadLeft.update(false);
+    op.flap.setTarget(FlowerFlap.Target.DOWN);
+    clearInvocations(op.shotController, op.shooter, op.intake);
+    for (int i = 0; i < 3; i++) {
+      op.operatorDpadUp.update(true);
+      op.onLoop();
+      Scheduler.execute();
+      assertEquals(FlowerFlap.Target.UP, op.flap.target());
+      op.operatorDpadUp.update(false);
+      op.onLoop();
+      Scheduler.execute();
+    }
+    verify(op.shotController, never()).startShot(anyDouble(), anyBoolean());
+    verifyNoInteractions(op.shooter, op.intake);
   }
 }

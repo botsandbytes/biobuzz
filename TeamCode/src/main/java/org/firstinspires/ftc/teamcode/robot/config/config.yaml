@@ -552,9 +552,9 @@ flap:
   pwm_upper_us: 2500.0
   # Nominal full shaft sweep; verify the servo is programmed in 360-degree positional mode.
   servo_range_deg: 360.0
-  # Keep the verified backward target; extend forward/down by 40 nominal degrees.
-  up_angle_deg: 0.0
-  down_angle_deg: 220.0
+  # Normalized servo positions: UP 0.12 (43.2 / 360), DOWN 0.9 (324 / 360).
+  up_angle_deg: 43.2
+  down_angle_deg: 324.0
   reversed: false
 
 teleop:
