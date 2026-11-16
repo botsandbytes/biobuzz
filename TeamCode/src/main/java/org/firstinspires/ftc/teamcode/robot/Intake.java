@@ -14,7 +14,7 @@ import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 import org.firstinspires.ftc.teamcode.utilities.BallInventory;
 
 /**
- * Intake motor, shooter-following transfer servo, and G407 four-element inventory.
+ * Intake motor, transfer servo, and G407 four-element inventory.
  *
  * <p>Single writer: commands, {@link ShotController} and OpModes set a target with {@link #run},
  * {@link #feed}, {@link #eject} or {@link #stop}; only {@link #periodic()} writes actuator power.
@@ -41,6 +41,7 @@ public class Intake {
   private double targetPower = 0.0;
   private boolean blockedByCapacity = false;
   private boolean transferStopped = false;
+  private boolean shotTransferGated = false;
 
   public Intake(HardwareMap hardwareMap, DoubleSupplier shooterTargetPower) {
     this.shooterTargetPower = shooterTargetPower;
@@ -79,7 +80,7 @@ public class Intake {
     setTarget(Mode.EJECT, reverse);
   }
 
-  /** Stop the intake motor. The transfer independently follows the shooter's target. */
+  /** Stop the intake motor and close the transfer's feed gate during a shot. */
   public void stop() {
     setTarget(Mode.STOPPED, 0.0);
   }
@@ -92,16 +93,25 @@ public class Intake {
     transferStopped = true;
   }
 
-  /** Resume following the shooter; the transfer stays off while the shooter target is zero. */
+  /** Clear the operator's transfer stop. */
   public void resumeTransfer() {
     transferStopped = false;
+  }
+
+  /** During a shot, use the feed target resolved by ShotController for both actuators. */
+  void setShotTransferGated(boolean gated) {
+    shotTransferGated = gated;
   }
 
   public String getTransferStatus() {
     return String.format(
         Locale.ROOT,
         "%s; command %.2f; port %d",
-        transferStopped ? "Stopped by operator/path" : "Following shooter",
+        transferStopped
+            ? "Stopped by operator/path"
+            : mode == Mode.COLLECT && !blockedByCapacity
+                ? "Stopped while collecting"
+                : (shotTransferGated ? "Following shot feed" : "Following shooter"),
         intakeTransfer.getPower(),
         intakeTransfer.getPortNumber());
   }
@@ -166,10 +176,17 @@ public class Intake {
             ? DcMotorSimple.Direction.REVERSE
             : DcMotorSimple.Direction.FORWARD);
     double shooterPower = shooterTargetPower.getAsDouble();
-    intakeTransfer.setPower(
-        !transferStopped && Double.isFinite(shooterPower) && shooterPower > 0.0
-            ? config.intake.transfer_power
-            : 0.0);
+    // The transfer never runs while the intake is collecting (a full inventory holds the intake
+    // off,
+    // so the transfer follows the shooter again).
+    boolean collecting = mode == Mode.COLLECT && !blockedByCapacity;
+    boolean transferRunning =
+        !transferStopped
+            && !collecting
+            && Double.isFinite(shooterPower)
+            && shooterPower > 0.0
+            && (!shotTransferGated || mode == Mode.FEED);
+    intakeTransfer.setPower(transferRunning ? config.intake.transfer_power : 0.0);
   }
 
   public Command runIntakeCommand(double power) {

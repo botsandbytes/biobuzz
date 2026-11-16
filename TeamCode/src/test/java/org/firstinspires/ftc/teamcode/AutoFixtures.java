@@ -9,33 +9,58 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import org.firstinspires.ftc.teamcode.auto.DownAuto;
+import org.firstinspires.ftc.teamcode.auto.PathUtil;
 import org.firstinspires.ftc.teamcode.config.ConfigLoader;
 import org.firstinspires.ftc.teamcode.records.Alliance;
 import org.firstinspires.ftc.teamcode.records.HiveCell;
 import org.firstinspires.ftc.teamcode.records.MatchProfile;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
+import org.firstinspires.ftc.teamcode.utilities.Sentinel;
 
 /**
  * Loads every autonomous routine's poses for an alliance and rebuilds exactly the paths its OpMode
  * builds in {@code buildPaths()}, so tests can check what the robot will actually drive without an
- * OpMode or a hardware map. Keep this in step with {@code CellAAuto}, {@code CellBAuto} and {@code
- * ParkOnlyAuto}: those are the source of truth.
+ * OpMode or a hardware map. Keep this in step with {@code CellAAuto}, {@code CellBAuto}, {@code
+ * ParkOnlyAuto}, {@code UpAuto} and {@code DownAuto}: those are the source of truth.
  */
 final class AutoFixtures {
 
   private AutoFixtures() {}
 
-  /** A place the routine shoots from, and the CELL it shoots into. */
-  record Volley(String name, HiveCell cell, Pose pose) {}
+  /**
+   * A place the routine shoots from, and the CELL it shoots into. {@code fixed}: fired from this
+   * spot at {@code teleop.manual_rev_power}, without the shot table.
+   */
+  record Volley(String name, HiveCell cell, Pose pose, boolean fixed) {
+    Volley(String name, HiveCell cell, Pose pose) {
+      this(name, cell, pose, false);
+    }
+  }
 
-  /** One routine for one alliance: its key poses, every path it may follow and its volleys. */
+  /**
+   * One routine for one alliance: its key poses, every path it may follow and its volleys. {@code
+   * park} is where it ends; {@code parks} false means that end only earns LEAVE.
+   */
   record Routine(
       String name,
       Alliance alliance,
       Pose start,
       Pose park,
       Map<String, Path> paths,
-      List<Volley> volleys) {
+      List<Volley> volleys,
+      boolean parks) {
+
+    Routine(
+        String name,
+        Alliance alliance,
+        Pose start,
+        Pose park,
+        Map<String, Path> paths,
+        List<Volley> volleys) {
+      this(name, alliance, start, park, paths, volleys, true);
+    }
 
     @Override
     public String toString() {
@@ -115,16 +140,67 @@ final class AutoFixtures {
     return new Routine("park_only", alliance, p.start, p.park, paths, List.of());
   }
 
-  static List<Routine> routines(Alliance alliance) {
-    return List.of(cellA(alliance), cellB(alliance), parkOnly(alliance));
+  static config.UpAuto upPoses(Alliance alliance) {
+    return ConfigLoader.loadMerged(config.UpAuto.class, "auto_poses.up." + side(alliance), "auto");
   }
 
-  /** The TeleOp hold points that shoot into CELL A and CELL B. */
+  static config.DownAuto downPoses(Alliance alliance) {
+    return ConfigLoader.loadMerged(
+        config.DownAuto.class, "auto_poses.down." + side(alliance), "auto");
+  }
+
+  /** A driven go-around from {@code from} to {@code to}, as PathUtil.followAround drives it. */
+  private static Path around(Sentinel sentinel, Pose from, Pose to) {
+    Predicate<Path> clear =
+        curve -> sentinel.routeProblem(curve, config.sentinel.route_sample_step, true).isEmpty();
+    return PathUtil.smoothRoute(
+        from, sentinel.routeAround(from, to, true), config.sentinel.route_corner_radius_in, clear);
+  }
+
+  /** Mirrors {@code UpAuto}: its two curved go-arounds, as PathUtil.followAround drives them. */
+  static Routine up(Alliance alliance) {
+    config.UpAuto p = upPoses(alliance);
+    Pose shoot = MatchProfile.loadMatchProfile(alliance).shootAPose();
+    Sentinel sentinel = new Sentinel(alliance);
+    Map<String, Path> paths = new LinkedHashMap<>();
+    paths.put("start->shoot", around(sentinel, p.start, shoot));
+    paths.put("shoot->park", around(sentinel, shoot, p.park));
+    return new Routine(
+        "up",
+        alliance,
+        p.start,
+        p.park,
+        paths,
+        List.of(new Volley("shoot", HiveCell.A, shoot, true)));
+  }
+
+  /** Mirrors {@code DownAuto} with {@code auto.down_park} set to {@code parks}. */
+  static Routine down(Alliance alliance, boolean parks) {
+    config.DownAuto p = downPoses(alliance);
+    Pose start = DownAuto.flipOfUp(upPoses(alliance).start);
+    Pose end = parks ? p.park : p.leave;
+    Map<String, Path> paths = new LinkedHashMap<>();
+    paths.put(parks ? "start->park" : "start->leave", around(new Sentinel(alliance), start, end));
+    return new Routine(
+        parks ? "down" : "down_leave", alliance, start, end, paths, List.of(), parks);
+  }
+
+  static List<Routine> routines(Alliance alliance) {
+    return List.of(
+        cellA(alliance),
+        cellB(alliance),
+        parkOnly(alliance),
+        up(alliance),
+        down(alliance, true),
+        down(alliance, false));
+  }
+
+  /** The TeleOp hold points that shoot into CELL A and CELL B (operator RT's fixed shot). */
   static List<Volley> teleopVolleys(Alliance alliance) {
     MatchProfile profile = MatchProfile.loadMatchProfile(alliance);
     return List.of(
-        new Volley("teleop shoot_a", HiveCell.A, profile.shootAPose()),
-        new Volley("teleop shoot_b", HiveCell.B, profile.shootBPose()));
+        new Volley("teleop shoot_a", HiveCell.A, profile.shootAPose(), true),
+        new Volley("teleop shoot_b", HiveCell.B, profile.shootBPose(), true));
   }
 
   /** Every volley pose in the codebase for {@code alliance}: each routine's plus TeleOp's. */
@@ -132,7 +208,7 @@ final class AutoFixtures {
     List<Volley> all = new ArrayList<>();
     for (Routine routine : routines(alliance)) {
       for (Volley v : routine.volleys()) {
-        all.add(new Volley(routine.name() + " " + v.name(), v.cell(), v.pose()));
+        all.add(new Volley(routine.name() + " " + v.name(), v.cell(), v.pose(), v.fixed()));
       }
     }
     all.addAll(teleopVolleys(alliance));

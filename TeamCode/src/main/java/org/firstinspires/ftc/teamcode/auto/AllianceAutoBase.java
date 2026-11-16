@@ -8,12 +8,10 @@ import static com.pedropathing.ivy.commands.Commands.waitUntil;
 import static com.pedropathing.ivy.groups.Groups.race;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
-import static org.firstinspires.ftc.teamcode.auto.PathUtil.pline;
 
 import androidx.annotation.Nullable;
 import com.bylazar.field.FieldManager;
 import com.pedropathing.follower.Follower;
-import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.CommandBuilder;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
@@ -62,8 +60,8 @@ import org.firstinspires.ftc.teamcode.utilities.Sentinel;
  * #updateParkGuard} cancels whatever the routine is doing once the time left is no more than the
  * estimated drive to the park pose (stopping from the current speed, then the HIVE-avoiding route)
  * plus {@code auto.park_margin_ms}, and never later than {@code auto.park_reserve_ms} before the
- * end. It then drives to the routine's park pose, partly inside the LOADING ZONE and clear of the
- * wall.
+ * end. It then drives to the routine's park pose, one wheel inside the LOADING ZONE and clear of
+ * the wall.
  *
  * <p>The robot never launches at a CELL it does not believe is upward-facing: {@link #volley} waits
  * up to {@code auto.tip_wait_ms} for the HIVE tracker to report the CELL up and skips the volley
@@ -77,6 +75,7 @@ public abstract class AllianceAutoBase<T> extends OpMode {
   protected final Class<T> poseClass;
   protected final String posePrefix;
   protected T poses;
+  protected MatchProfile profile;
 
   protected Robot robot;
   protected Intake intake;
@@ -125,7 +124,10 @@ public abstract class AllianceAutoBase<T> extends OpMode {
 
   protected abstract Pose startPose();
 
-  /** Partly inside the LOADING ZONE, clear of the wall: earns LEAVE and PARK. */
+  /**
+   * Where the routine ends and the park guard drives: one wheel in the LOADING ZONE, clear of the
+   * wall (LEAVE and PARK), or for a LEAVE-only routine, just off the wall.
+   */
   protected abstract Pose parkPose();
 
   /** Where the first volley is fired, to pre-position the hood at init; null if none. */
@@ -142,7 +144,8 @@ public abstract class AllianceAutoBase<T> extends OpMode {
     blackboard.clear();
     blackboard.put("ALLIANCE", alliance);
 
-    robot = new Robot(hardwareMap, telemetry, MatchProfile.loadMatchProfile(alliance));
+    profile = MatchProfile.loadMatchProfile(alliance);
+    robot = new Robot(hardwareMap, telemetry, profile, true);
     follower = robot.follower;
     intake = robot.intake;
     shooter = robot.shooter;
@@ -198,7 +201,7 @@ public abstract class AllianceAutoBase<T> extends OpMode {
     telemetry.addData("Alliance", alliance);
     telemetry.addData("Config", ConfigLoader.loadedSource());
     OpModeUtil.reportConfig(telemetry);
-    if (!config.shooter.shot_table.calibrated) {
+    if (firstVolleyPose() != null && !config.shooter.shot_table.calibrated) {
       telemetry.addLine("!! Shot tables are PLACEHOLDERS: volleys will time out without firing");
     }
     for (String warning : warnings) {
@@ -214,6 +217,7 @@ public abstract class AllianceAutoBase<T> extends OpMode {
     parkDriveSeconds = Double.NaN;
     clock.start();
     status = "running";
+    // AUTO never commands the flower flap: it starts UP and stays there.
     schedule(buildAuto());
   }
 
@@ -252,8 +256,10 @@ public abstract class AllianceAutoBase<T> extends OpMode {
         intake.inventory().isKnown() ? Integer.toString(intake.inventory().count()) : "unknown");
     telemetry.addData("Shot", robot.shotController.getGateReason());
     telemetry.addData(
-        "Scoring at park",
-        sentinel.earnsLeaveAndPark(follower.pose()) ? "LEAVE + PARK" : "not yet");
+        "Scoring here",
+        sentinel.isTouchingWall(follower.pose())
+            ? "touching wall: no LEAVE"
+            : sentinel.isParked(follower.pose()) ? "LEAVE + PARK" : "LEAVE");
     telemetry.update();
   }
 
@@ -321,37 +327,21 @@ public abstract class AllianceAutoBase<T> extends OpMode {
 
   /** Follows straight segments through {@code waypoints}, starting from {@code from}. */
   protected CommandBuilder followRoute(Pose from, List<Pose> waypoints) {
-    if (waypoints.isEmpty()) {
-      return instant(follower::stop).requiring(follower);
-    }
-    Command[] legs = new Command[waypoints.size()];
-    Pose previous = from;
-    for (int i = 0; i < waypoints.size(); i++) {
-      Pose to = waypoints.get(i);
-      legs[i] =
-          previous.distance(to) == 0.0
-              ? instant(() -> follower.hold(to)).requiring(follower)
-              : follow(follower, pline(previous, to));
-      previous = waypoints.get(i);
-    }
-    return sequential(legs);
+    return PathUtil.followRoute(follower, from, waypoints);
   }
 
-  /** Spins the flywheel up and starts collecting, then drives {@code path}. */
-  protected CommandBuilder intakeAndFollow(Path path) {
+  /**
+   * Drives {@code path} into the retrieval opening at {@code flower} with the flywheel spinning up
+   * and the intake running, then dwells there. The flower flap is never moved in AUTO: it stays UP.
+   */
+  protected CommandBuilder collectAt(Path path, Pose flower) {
     return sequential(
         instant(
             () -> {
               shooter.setTargetPower(Shooter.constantPower());
               intake.run(config.auto.intake_power);
             }),
-        follow(follower, path));
-  }
-
-  /** Drives into a FLOWER's retrieval opening with the intake running, then dwells there. */
-  protected CommandBuilder collectAt(Path path) {
-    return sequential(
-        intakeAndFollow(path),
+        follow(follower, path),
         waitMs(config.auto.collect_dwell_ms),
         // Stop collecting once the dwell is over. Without an entry sensor the inventory count is
         // unknown once the intake runs, so nothing else would stop a fifth element (G407) being

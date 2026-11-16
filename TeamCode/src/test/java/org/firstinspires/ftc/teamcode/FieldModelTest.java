@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.pedropathing.math.Pose;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.game.FieldModel;
 import org.firstinspires.ftc.teamcode.records.Alliance;
@@ -347,6 +350,49 @@ public class FieldModelTest {
     assertEquals(47.36, r.get(0).y, 0.5);
     assertTrue(red.allianceSide().contains(r.get(0)) && red.allianceSide().contains(r.get(1)));
     assertTrue(blue.allianceSide().contains(b.get(0)) && blue.allianceSide().contains(b.get(1)));
+  }
+
+  /**
+   * Each of the four FLOWER approaches stands where the configured one does relative to its own
+   * FLOWER (the same distance ahead and to the side, in the robot's frame), one per FLOWER. The
+   * FLOWER centres come from both alliances' {@code allianceSideFlowers}, not from the rotation.
+   */
+  @Test
+  public void testFlowerApproachesReachEveryFlowerTheSameWay() {
+    List<Coordinate> flowers = new ArrayList<>(red.allianceSideFlowers());
+    flowers.addAll(blue.allianceSideFlowers());
+    for (Alliance alliance : Alliance.values()) {
+      Pose configured = config.loadMatchProfile(alliance).flowerPose();
+      double[] expected = nearestFlowerInRobotFrame(configured, flowers);
+      List<Pose> approaches = of(alliance).flowerApproaches(configured);
+      assertEquals(4, approaches.size());
+      assertEquals(configured.x(), approaches.get(0).x(), EPS);
+      assertEquals(configured.y(), approaches.get(0).y(), EPS);
+      Set<Integer> reached = new HashSet<>();
+      for (Pose approach : approaches) {
+        double[] got = nearestFlowerInRobotFrame(approach, flowers);
+        assertEquals(expected[0], got[0], 1e-6, alliance + " ahead, " + approach);
+        assertEquals(expected[1], got[1], 1e-6, alliance + " left, " + approach);
+        reached.add((int) got[2]);
+      }
+      assertEquals(4, reached.size(), alliance + ": one approach per FLOWER");
+    }
+  }
+
+  /** {ahead, left, index} of the FLOWER nearest {@code pose}, in the robot's frame. */
+  private static double[] nearestFlowerInRobotFrame(Pose pose, List<Coordinate> flowers) {
+    Coordinate at = new Coordinate(pose.x(), pose.y());
+    int nearest = 0;
+    for (int i = 1; i < flowers.size(); i++) {
+      if (flowers.get(i).distance(at) < flowers.get(nearest).distance(at)) {
+        nearest = i;
+      }
+    }
+    double dx = flowers.get(nearest).x - pose.x();
+    double dy = flowers.get(nearest).y - pose.y();
+    double c = Math.cos(pose.heading());
+    double s = Math.sin(pose.heading());
+    return new double[] {dx * c + dy * s, -dx * s + dy * c, nearest};
   }
 
   // -------------------------------------------------------------------------------------------

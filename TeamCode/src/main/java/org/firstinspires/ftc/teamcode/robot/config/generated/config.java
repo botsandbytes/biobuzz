@@ -19,6 +19,7 @@ public final class config {
   public static TurretServoTest turret_servo_test;
   public static Turret turret;
   public static Vision vision;
+  public static Chassis chassis;
   public static Sentinel sentinel;
   public static Casablanca casablanca;
   public static Shooter shooter;
@@ -39,6 +40,8 @@ public final class config {
   public static double FIELD_HIVE_FRAME_WIDTH_IN;
   public static double FIELD_HIVE_FRAME_DEPTH_IN;
   public static double FIELD_HIVE_BOTTOM_HEIGHT_IN;
+  public static double FIELD_HIVE_ROUTE_OPENING_WIDTH_IN;
+  public static double FIELD_HIVE_ROUTE_OPENING_HEIGHT_IN;
   public static double FIELD_LOADING_ZONE_START_Y_IN;
   public static double FIELD_LOADING_ZONE_WIDTH_IN;
   public static double FIELD_LOADING_ZONE_DEPTH_IN;
@@ -185,14 +188,26 @@ public final class config {
   public static double VISION_CAMERA_PITCH_UP_DEG;
   public static double VISION_RELOCALIZE_MAX_RANGE_IN;
   public static double VISION_RELOCALIZE_MAX_CORRECTION_IN;
+  public static double CHASSIS_ROBOT_LENGTH_IN;
+  public static double CHASSIS_ROBOT_WIDTH_IN;
+  public static double CHASSIS_DRIVE_HEIGHT_IN;
+  public static double CHASSIS_BACK_AXLE_FROM_BACK_IN;
+  public static double CHASSIS_FRONT_AXLE_FROM_BACK_IN;
+  public static double CHASSIS_WHEEL_TRACK_IN;
   public static double SENTINEL_ROBOT_WIDTH;
+  public static boolean SENTINEL_FOOTPRINT_SAFETY_ENABLED;
   public static double SENTINEL_ROTATION_LOOKAHEAD_TIME;
   public static boolean SENTINEL_PROTECT_FULL_HIVE_FOOTPRINT;
   public static double SENTINEL_FRAME_BASE_WIDTH_IN;
+  public static boolean SENTINEL_ALLOW_UNDER_HIVE_ROUTES;
+  public static double SENTINEL_ROUTE_WALL_CLEARANCE_IN;
+  public static double SENTINEL_ROUTE_START_TOLERANCE_IN;
   public static double SENTINEL_CENTER_LINE_MARGIN_IN;
   public static double SENTINEL_WALL_CONTACT_TOLERANCE_IN;
   public static double SENTINEL_PARK_LANE_MARGIN_IN;
+  public static double SENTINEL_PARK_WHEEL_MARGIN_IN;
   public static double SENTINEL_ROUTE_SAMPLE_STEP;
+  public static double SENTINEL_ROUTE_CORNER_RADIUS_IN;
   public static double SENTINEL_PARK_TURN_RATE_DPS;
   public static double SENTINEL_PARK_SETTLE_PER_WAYPOINT_SEC;
   public static double SENTINEL_GEOMETRY_EPSILON_IN;
@@ -345,6 +360,7 @@ public final class config {
   public static boolean SHOOTER_SHOT_TABLE_NECTAR_ENABLED;
   public static double[] SHOOTER_SHOT_TABLE_POLLEN_POINTS;
   public static double[] SHOOTER_SHOT_TABLE_NECTAR_POINTS;
+  public static boolean AUTO_SHOT_WINDOW_ENABLED;
   public static double[] AUTO_SHOT_TIME_POINTS;
   public static int AUTO_SHOOT_WAIT_MS;
   public static int AUTO_BALLS_PER_VOLLEY_COUNT;
@@ -353,6 +369,8 @@ public final class config {
   public static int AUTO_PARK_MARGIN_MS;
   public static int AUTO_PARK_RESERVE_MS;
   public static int AUTO_PARK_UPDATE_MS;
+  public static double AUTO_DOWN_WAIT_SEC;
+  public static boolean AUTO_DOWN_PARK;
   public static double AUTO_INTAKE_POWER;
   public static boolean AUTO_CELL_A_COLLECT_FLOWER;
   public static boolean AUTO_CELL_A_SECOND_VOLLEY;
@@ -374,7 +392,11 @@ public final class config {
   public static double TELEOP_INTAKE_POWER;
   public static double TELEOP_MANUAL_REV_POWER;
   public static double TELEOP_EJECT_POWER;
+  public static double TELEOP_SHOT_DISTANCE_IN;
+  public static double TELEOP_SHOT_POSITION_TOLERANCE_IN;
   public static boolean TELEOP_FLOWER_HOLD_ENABLED;
+  public static double TELEOP_FLOWER_FLAP_LEAD_IN;
+  public static int TELEOP_FLOWER_FLAP_SETTLE_MS;
   public static int TELEOP_RUMBLE_MS;
   public static int TELEOP_PARK_ALERT_MARGIN_MS;
   public static int TELEOP_PARK_ALERT_UPDATE_MS;
@@ -384,11 +406,13 @@ public final class config {
   public static Pose TELEOP_POSES_RED_SHOOT_A;
   public static Pose TELEOP_POSES_RED_SHOOT_B;
   public static Pose TELEOP_POSES_RED_FLOWER;
+  public static Pose TELEOP_POSES_RED_RESET;
   public static Pose TELEOP_POSES_BLUE_START;
   public static Pose TELEOP_POSES_BLUE_PARK;
   public static Pose TELEOP_POSES_BLUE_SHOOT_A;
   public static Pose TELEOP_POSES_BLUE_SHOOT_B;
   public static Pose TELEOP_POSES_BLUE_FLOWER;
+  public static Pose TELEOP_POSES_BLUE_RESET;
   public static boolean AGENT_BRIDGE_BRIDGE_ENABLED;
   public static double AGENT_BRIDGE_RECORD_RATE_HZ;
   public static double AGENT_BRIDGE_RECORD_MAX_ROWS;
@@ -418,6 +442,7 @@ public final class config {
     turret_servo_test = ConfigLoader.load(TurretServoTest.class, "turret_servo_test");
     turret = ConfigLoader.load(Turret.class, "turret");
     vision = ConfigLoader.load(Vision.class, "vision");
+    chassis = ConfigLoader.load(Chassis.class, "chassis");
     sentinel = ConfigLoader.load(Sentinel.class, "sentinel");
     casablanca = ConfigLoader.load(Casablanca.class, "casablanca");
     shooter = ConfigLoader.load(Shooter.class, "shooter");
@@ -437,6 +462,8 @@ public final class config {
     FIELD_HIVE_FRAME_WIDTH_IN = field.hive.frame_width_in;
     FIELD_HIVE_FRAME_DEPTH_IN = field.hive.frame_depth_in;
     FIELD_HIVE_BOTTOM_HEIGHT_IN = field.hive.bottom_height_in;
+    FIELD_HIVE_ROUTE_OPENING_WIDTH_IN = field.hive.route_opening_width_in;
+    FIELD_HIVE_ROUTE_OPENING_HEIGHT_IN = field.hive.route_opening_height_in;
     FIELD_LOADING_ZONE_START_Y_IN = field.loading_zone.start_y_in;
     FIELD_LOADING_ZONE_WIDTH_IN = field.loading_zone.width_in;
     FIELD_LOADING_ZONE_DEPTH_IN = field.loading_zone.depth_in;
@@ -583,14 +610,26 @@ public final class config {
     VISION_CAMERA_PITCH_UP_DEG = vision.camera.pitch_up_deg;
     VISION_RELOCALIZE_MAX_RANGE_IN = vision.relocalize.max_range_in;
     VISION_RELOCALIZE_MAX_CORRECTION_IN = vision.relocalize.max_correction_in;
+    CHASSIS_ROBOT_LENGTH_IN = chassis.robot_length_in;
+    CHASSIS_ROBOT_WIDTH_IN = chassis.robot_width_in;
+    CHASSIS_DRIVE_HEIGHT_IN = chassis.drive_height_in;
+    CHASSIS_BACK_AXLE_FROM_BACK_IN = chassis.back_axle_from_back_in;
+    CHASSIS_FRONT_AXLE_FROM_BACK_IN = chassis.front_axle_from_back_in;
+    CHASSIS_WHEEL_TRACK_IN = chassis.wheel_track_in;
     SENTINEL_ROBOT_WIDTH = sentinel.robot_width;
+    SENTINEL_FOOTPRINT_SAFETY_ENABLED = sentinel.footprint_safety_enabled;
     SENTINEL_ROTATION_LOOKAHEAD_TIME = sentinel.rotation_lookahead_time;
     SENTINEL_PROTECT_FULL_HIVE_FOOTPRINT = sentinel.protect_full_hive_footprint;
     SENTINEL_FRAME_BASE_WIDTH_IN = sentinel.frame_base_width_in;
+    SENTINEL_ALLOW_UNDER_HIVE_ROUTES = sentinel.allow_under_hive_routes;
+    SENTINEL_ROUTE_WALL_CLEARANCE_IN = sentinel.route_wall_clearance_in;
+    SENTINEL_ROUTE_START_TOLERANCE_IN = sentinel.route_start_tolerance_in;
     SENTINEL_CENTER_LINE_MARGIN_IN = sentinel.center_line_margin_in;
     SENTINEL_WALL_CONTACT_TOLERANCE_IN = sentinel.wall_contact_tolerance_in;
     SENTINEL_PARK_LANE_MARGIN_IN = sentinel.park_lane_margin_in;
+    SENTINEL_PARK_WHEEL_MARGIN_IN = sentinel.park_wheel_margin_in;
     SENTINEL_ROUTE_SAMPLE_STEP = sentinel.route_sample_step;
+    SENTINEL_ROUTE_CORNER_RADIUS_IN = sentinel.route_corner_radius_in;
     SENTINEL_PARK_TURN_RATE_DPS = sentinel.park_turn_rate_dps;
     SENTINEL_PARK_SETTLE_PER_WAYPOINT_SEC = sentinel.park_settle_per_waypoint_sec;
     SENTINEL_GEOMETRY_EPSILON_IN = sentinel.geometry_epsilon_in;
@@ -747,6 +786,7 @@ public final class config {
     SHOOTER_SHOT_TABLE_NECTAR_ENABLED = shooter.shot_table.nectar_enabled;
     SHOOTER_SHOT_TABLE_POLLEN_POINTS = shooter.shot_table.pollen_points;
     SHOOTER_SHOT_TABLE_NECTAR_POINTS = shooter.shot_table.nectar_points;
+    AUTO_SHOT_WINDOW_ENABLED = auto.shot_window_enabled;
     AUTO_SHOT_TIME_POINTS = auto.shot_time_points;
     AUTO_SHOOT_WAIT_MS = auto.shoot_wait_ms;
     AUTO_BALLS_PER_VOLLEY_COUNT = auto.balls_per_volley_count;
@@ -755,6 +795,8 @@ public final class config {
     AUTO_PARK_MARGIN_MS = auto.park_margin_ms;
     AUTO_PARK_RESERVE_MS = auto.park_reserve_ms;
     AUTO_PARK_UPDATE_MS = auto.park_update_ms;
+    AUTO_DOWN_WAIT_SEC = auto.down_wait_sec;
+    AUTO_DOWN_PARK = auto.down_park;
     AUTO_INTAKE_POWER = auto.intake_power;
     AUTO_CELL_A_COLLECT_FLOWER = auto.cell_a_collect_flower;
     AUTO_CELL_A_SECOND_VOLLEY = auto.cell_a_second_volley;
@@ -776,7 +818,11 @@ public final class config {
     TELEOP_INTAKE_POWER = teleop.intake_power;
     TELEOP_MANUAL_REV_POWER = teleop.manual_rev_power;
     TELEOP_EJECT_POWER = teleop.eject_power;
+    TELEOP_SHOT_DISTANCE_IN = teleop.shot_distance_in;
+    TELEOP_SHOT_POSITION_TOLERANCE_IN = teleop.shot_position_tolerance_in;
     TELEOP_FLOWER_HOLD_ENABLED = teleop.flower_hold_enabled;
+    TELEOP_FLOWER_FLAP_LEAD_IN = teleop.flower_flap_lead_in;
+    TELEOP_FLOWER_FLAP_SETTLE_MS = teleop.flower_flap_settle_ms;
     TELEOP_RUMBLE_MS = teleop.rumble_ms;
     TELEOP_PARK_ALERT_MARGIN_MS = teleop.park_alert_margin_ms;
     TELEOP_PARK_ALERT_UPDATE_MS = teleop.park_alert_update_ms;
@@ -786,11 +832,13 @@ public final class config {
     TELEOP_POSES_RED_SHOOT_A = teleop.poses.red.shoot_a;
     TELEOP_POSES_RED_SHOOT_B = teleop.poses.red.shoot_b;
     TELEOP_POSES_RED_FLOWER = teleop.poses.red.flower;
+    TELEOP_POSES_RED_RESET = teleop.poses.red.reset;
     TELEOP_POSES_BLUE_START = teleop.poses.blue.start;
     TELEOP_POSES_BLUE_PARK = teleop.poses.blue.park;
     TELEOP_POSES_BLUE_SHOOT_A = teleop.poses.blue.shoot_a;
     TELEOP_POSES_BLUE_SHOOT_B = teleop.poses.blue.shoot_b;
     TELEOP_POSES_BLUE_FLOWER = teleop.poses.blue.flower;
+    TELEOP_POSES_BLUE_RESET = teleop.poses.blue.reset;
     AGENT_BRIDGE_BRIDGE_ENABLED = agent_bridge.bridge_enabled;
     AGENT_BRIDGE_RECORD_RATE_HZ = agent_bridge.record_rate_hz;
     AGENT_BRIDGE_RECORD_MAX_ROWS = agent_bridge.record_max_rows;
@@ -865,9 +913,18 @@ public final class config {
 
       /**
        * Lowest HIVE point above the TILES (inches). TU05 corrected V1's 25.5 in typo to 30.6 in; a
-       * robot must stay below this to pass under the HIVE. Minimum: 0.0
+       * robot must stay below this to pass under the HIVE.
        */
       public double bottom_height_in;
+
+      /**
+       * Conservative clear width (inches) between the HIVE side supports for the route opening
+       * height, based on the official STEP model and field tolerance. Minimum: 0.0
+       */
+      public double route_opening_width_in;
+
+      /** Maximum robot driving height (inches) covered by the modeled HIVE opening. Minimum: 0.0 */
+      public double route_opening_height_in;
     }
 
     public Hive hive;
@@ -1687,12 +1744,58 @@ public final class config {
     public Relocalize relocalize;
   }
 
+  public static final class Chassis {
+    /**
+     * Robot length, back edge to front edge (inches). With the axle positions it places the spin
+     * centre (Pedro's pose) for the start and reset poses. Minimum: 0.0
+     */
+    public double robot_length_in;
+
+    /**
+     * Robot width, left edge to right edge (inches). The spin centre is on the centre line,
+     * robot_width_in / 2 from each side. Minimum: 0.0
+     */
+    public double robot_width_in;
+
+    /**
+     * Maximum robot height above the tiles (inches) in the configuration used for path following,
+     * including any moving mechanisms. Minimum: 0.0
+     */
+    public double drive_height_in;
+
+    /**
+     * Back wheel centre's distance from the robot's back edge (inches). The spin centre is midway
+     * between the axles. Minimum: 0.0
+     */
+    public double back_axle_from_back_in;
+
+    /**
+     * Front wheel centre's distance from the robot's back edge (inches). The spin centre is midway
+     * between the axles. Minimum: 0.0
+     */
+    public double front_axle_from_back_in;
+
+    /**
+     * Left wheel centre to right wheel centre (inches), wheels centred side to side. With the axle
+     * positions it places the four wheel contacts PARK is judged by. Minimum: 0.0
+     */
+    public double wheel_track_in;
+  }
+
   public static final class Sentinel {
     /**
      * Total physical width of the robot (inches) used to build its square collision footprint for
      * HIVE-frame protection, LEAVE/PARK checks and the G402 alliance-side check. Minimum: 0.0
      */
     public double robot_width;
+
+    /**
+     * True: the footprint gates refuse motion (the driver's turn near the HIVE, a shot's turn in
+     * place, TeleOp pose holds that would cross the HIVE or a wall) and AutoRouteSafetyTest checks
+     * every AUTO route. False: none of these refuse anything and the route checks are skipped; the
+     * park route still plans around the HIVE.
+     */
+    public boolean footprint_safety_enabled;
 
     /**
      * Time horizon (seconds) used to project future rotation based on live angular velocity
@@ -1716,6 +1819,26 @@ public final class config {
     public double frame_base_width_in;
 
     /**
+     * Allow generated paths through the HIVE opening when the robot's driving height and swept
+     * footprint fit.
+     */
+    public boolean allow_under_hive_routes;
+
+    /**
+     * Minimum planned clearance (inches) between the chassis and the perimeter walls. A path may
+     * depart from a wall-touching start. Minimum: 0.0
+     */
+    public double route_wall_clearance_in;
+
+    /**
+     * Inches. A measured route start (Sentinel.routeAround, parkRoute) whose chassis reads up to
+     * this far past a perimeter wall is moved straight in to the wall and planned from there: a
+     * robot pushed against a wall reads slightly past it (Pinpoint float rounding, heading noise).
+     * Farther out, no route is planned. Minimum: 0.0 Maximum: 3.0
+     */
+    public double route_start_tolerance_in;
+
+    /**
      * Margin (inches) the robot footprint must keep from the field centre line to count as fully on
      * its own side (G304.A / G402). Minimum: 0.0
      */
@@ -1734,10 +1857,26 @@ public final class config {
     public double park_lane_margin_in;
 
     /**
+     * Inches. Every configured park pose has exactly one wheel contact at least this far inside the
+     * LOADING ZONE and the other three at least this far outside it (AutoRouteSafetyTest). Half a
+     * wheel width plus end-of-path error. Minimum: 0.0
+     */
+    public double park_wheel_margin_in;
+
+    /**
      * Parameter increment for autonomous and assisted-drive path safety sampling. Smaller values
      * check more positions. Minimum: 0.001 Maximum: 0.02
      */
     public double route_sample_step;
+
+    /**
+     * Inches. A driven go-around (Sentinel.routeAround, via PathUtil.followAround) rounds each
+     * corner into a quadratic Bezier curve starting and ending this far either side of the corner
+     * (at most 45% of either leg), so the robot does not stop at corners. Each curve is re-checked
+     * against the HIVE frame and the walls; a corner whose curve is not clear stays sharp. Minimum:
+     * 0.0 Maximum: 36.0
+     */
+    public double route_corner_radius_in;
 
     /**
      * Turn rate (degrees/second) assumed when estimating how long a park route takes. Lower is more
@@ -2682,11 +2821,18 @@ public final class config {
 
   public static final class Auto {
     /**
+     * Whether an autonomous volley also ends when its shot_time_points window expires. false: it
+     * ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or
+     * the robot is known empty), and the park guard still ends the routine at its park deadline.
+     */
+    public boolean shot_window_enabled;
+
+    /**
      * Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the
      * Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase;
-     * interpolated and clamped at the ends. A volley ends when auto.balls_per_volley_count balls
-     * are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is
-     * the fallback when this table is empty.
+     * interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when
+     * auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam
+     * safety net. auto.shoot_wait_ms is the fallback when this table is empty.
      */
     public double[] shot_time_points;
 
@@ -2734,6 +2880,18 @@ public final class config {
     public int park_update_ms;
 
     /**
+     * Down AUTO: seconds to sit at the start after START before driving. The park deadline still
+     * cuts a long wait short, so the robot always reaches its end pose. Minimum: 0.0 Maximum: 30.0
+     */
+    public double down_wait_sec;
+
+    /**
+     * Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE +
+     * PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only).
+     */
+    public boolean down_park;
+
+    /**
      * Target power (0.0 to 1.0) for the single intake motor while collecting in TeleOp or
      * autonomous. Minimum: 0.0 Maximum: 1.0
      */
@@ -2766,9 +2924,8 @@ public final class config {
     public String transfer_servo_name;
 
     /**
-     * Transfer servo power while the shooter target is positive, including spin-up. Independent of
-     * intake collection, feed gates, eject, and inventory cap; zero when shooter is stopped or
-     * transfer is manually stopped. Minimum: 0.0 Maximum: 1.0
+     * Transfer servo power during shot feeding or a manual rev. During a shot, transfer follows the
+     * resolved feed target, including explicit manual feed. Minimum: 0.0 Maximum: 1.0
      */
     public double transfer_power;
 
@@ -2837,10 +2994,9 @@ public final class config {
     public boolean field_centric;
 
     /**
-     * Field heading (degrees) that a fully-forward driver stick should drive toward when
-     * field_centric is true. 90 means stick-forward drives along field +Y, i.e. away from the
-     * driver wall at y=0. Set this to whatever direction is 'away' from where the drivers
-     * physically stand. Minimum: -360.0 Maximum: 360.0
+     * Extra rotation (degrees, counter-clockwise) of the field-centric stick frame. 0:
+     * stick-forward drives straight away from the drivers' own alliance wall (+x for RED, -x for
+     * BLUE, applied by alliance in Casablanca). Minimum: -360.0 Maximum: 360.0
      */
     public double field_centric_offset_deg;
 
@@ -2863,10 +3019,39 @@ public final class config {
     public double eject_power;
 
     /**
-     * TeleOp: driver dpad left drives to and holds the FLOWER pickup pose. False when the robot
-     * cannot take POLLEN from a FLOWER; the button then does nothing.
+     * Horizontal distance (inches) from the turret axis to the upward CELL opening that TeleOp
+     * aim-and-shoot drives to (straight toward or away from the CELL) before feeding. Keep it
+     * inside shooter.ballistics min/max_valid_distance. Minimum: 12.0 Maximum: 72.0
+     */
+    public double shot_distance_in;
+
+    /**
+     * Inches. Aim-and-shoot only drives when the robot is more than this far off shot_distance_in,
+     * and feeds only once the robot is within this of the spot it drove to. Minimum: 0.25 Maximum:
+     * 6.0
+     */
+    public double shot_position_tolerance_in;
+
+    /**
+     * TeleOp: the driver D-pad drives around the HIVE to the FLOWER in that direction (as the
+     * driver sees the field) and holds its pickup pose, a quarter turn of poses.<alliance>.flower
+     * about the field centre. False: the D-pad does nothing.
      */
     public boolean flower_hold_enabled;
+
+    /**
+     * Inches short of the FLOWER pickup pose (backed off along its heading) where the driver D-pad
+     * FLOWER trip stops to lower the flower flap before driving the rest of the way in. Minimum:
+     * 0.0 Maximum: 12.0
+     */
+    public double flower_flap_lead_in;
+
+    /**
+     * Milliseconds the D-pad FLOWER trip waits after lowering the flower flap before driving the
+     * last flower_flap_lead_in inches. The Axon sweeps about 280 degrees from UP to DOWN. Minimum:
+     * 0.0
+     */
+    public int flower_flap_settle_ms;
 
     /** Gamepad rumble length (milliseconds) for match-time cues. Minimum: 0.0 */
     public int rumble_ms;
@@ -2892,14 +3077,17 @@ public final class config {
     public static final class Poses {
       public static final class Red {
         /**
-         * Starting pose: touching the perimeter wall, fully on the alliance's side, not in the
-         * LOADING ZONE and not touching a FLOWER (G304).
+         * Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the
+         * perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a
+         * FLOWER (G304).
          */
         public Pose start;
 
         /**
-         * Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the
-         * perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.
+         * Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least
+         * sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside)
+         * and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and
+         * leaves the rest of the zone to the partner.
          */
         public Pose park;
 
@@ -2914,20 +3102,30 @@ public final class config {
          * may only be removed from the bottom).
          */
         public Pose flower;
+
+        /**
+         * TeleOp odometry reset pose (driver BACK, also during INIT): the robot pushed into the
+         * corner of the audience wall and the RED alliance wall, back on the audience wall, left
+         * side on the RED wall, facing the rear wall. BLUE uses the same corner (k).
+         */
+        public Pose reset;
       }
 
       public Red red;
 
       public static final class Blue {
         /**
-         * Starting pose: touching the perimeter wall, fully on the alliance's side, not in the
-         * LOADING ZONE and not touching a FLOWER (G304).
+         * Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the
+         * perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a
+         * FLOWER (G304).
          */
         public Pose start;
 
         /**
-         * Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the
-         * perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.
+         * Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least
+         * sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside)
+         * and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and
+         * leaves the rest of the zone to the partner.
          */
         public Pose park;
 
@@ -2942,6 +3140,13 @@ public final class config {
          * may only be removed from the bottom).
          */
         public Pose flower;
+
+        /**
+         * TeleOp odometry reset pose (driver BACK, also during INIT): the robot pushed into the
+         * corner of the audience wall and the RED alliance wall, back on the audience wall, left
+         * side on the RED wall, facing the rear wall. BLUE uses the same corner (k).
+         */
+        public Pose reset;
       }
 
       public Blue blue;
@@ -3041,8 +3246,10 @@ public final class config {
     public Pose flower;
 
     /**
-     * Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter
-     * wall, so the robot earns both LEAVE and PARK at the end of AUTO.
+     * Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least
+     * sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and
+     * the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves
+     * the rest of the zone to the partner.
      */
     public Pose park;
 
@@ -3059,18 +3266,26 @@ public final class config {
     public Pose scoreBCp;
 
     /**
-     * Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING
-     * ZONE and not touching a FLOWER (G304).
+     * Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the
+     * perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a
+     * FLOWER (G304).
      */
     public Pose start;
 
     // Shared operational parameters (same for both alliances)
     /**
+     * Whether an autonomous volley also ends when its shot_time_points window expires. false: it
+     * ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or
+     * the robot is known empty), and the park guard still ends the routine at its park deadline.
+     */
+    public boolean shotWindowEnabled;
+
+    /**
      * Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the
      * Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase;
-     * interpolated and clamped at the ends. A volley ends when auto.balls_per_volley_count balls
-     * are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is
-     * the fallback when this table is empty.
+     * interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when
+     * auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam
+     * safety net. auto.shoot_wait_ms is the fallback when this table is empty.
      */
     public double[] shotTimePoints;
 
@@ -3115,6 +3330,18 @@ public final class config {
      * park deadline.
      */
     public int parkUpdateMs;
+
+    /**
+     * Down AUTO: seconds to sit at the start after START before driving. The park deadline still
+     * cuts a long wait short, so the robot always reaches its end pose.
+     */
+    public double downWaitSec;
+
+    /**
+     * Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE +
+     * PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only).
+     */
+    public boolean downPark;
 
     /**
      * Target power (0.0 to 1.0) for the single intake motor while collecting in TeleOp or
@@ -3157,8 +3384,10 @@ public final class config {
     public Pose flower;
 
     /**
-     * Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter
-     * wall, so the robot earns both LEAVE and PARK at the end of AUTO.
+     * Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least
+     * sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and
+     * the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves
+     * the rest of the zone to the partner.
      */
     public Pose park;
 
@@ -3172,18 +3401,26 @@ public final class config {
     public Pose scoreBCp;
 
     /**
-     * Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING
-     * ZONE and not touching a FLOWER (G304).
+     * Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the
+     * perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a
+     * FLOWER (G304).
      */
     public Pose start;
 
     // Shared operational parameters (same for both alliances)
     /**
+     * Whether an autonomous volley also ends when its shot_time_points window expires. false: it
+     * ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or
+     * the robot is known empty), and the park guard still ends the routine at its park deadline.
+     */
+    public boolean shotWindowEnabled;
+
+    /**
      * Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the
      * Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase;
-     * interpolated and clamped at the ends. A volley ends when auto.balls_per_volley_count balls
-     * are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is
-     * the fallback when this table is empty.
+     * interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when
+     * auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam
+     * safety net. auto.shoot_wait_ms is the fallback when this table is empty.
      */
     public double[] shotTimePoints;
 
@@ -3228,6 +3465,18 @@ public final class config {
      * park deadline.
      */
     public int parkUpdateMs;
+
+    /**
+     * Down AUTO: seconds to sit at the start after START before driving. The park deadline still
+     * cuts a long wait short, so the robot always reaches its end pose.
+     */
+    public double downWaitSec;
+
+    /**
+     * Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE +
+     * PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only).
+     */
+    public boolean downPark;
 
     /**
      * Target power (0.0 to 1.0) for the single intake motor while collecting in TeleOp or
@@ -3256,24 +3505,34 @@ public final class config {
 
   public static final class ParkOnlyAuto {
     /**
-     * Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter
-     * wall, so the robot earns both LEAVE and PARK at the end of AUTO.
+     * Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least
+     * sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and
+     * the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves
+     * the rest of the zone to the partner.
      */
     public Pose park;
 
     /**
-     * Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING
-     * ZONE and not touching a FLOWER (G304).
+     * Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the
+     * perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a
+     * FLOWER (G304).
      */
     public Pose start;
 
     // Shared operational parameters (same for both alliances)
     /**
+     * Whether an autonomous volley also ends when its shot_time_points window expires. false: it
+     * ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or
+     * the robot is known empty), and the park guard still ends the routine at its park deadline.
+     */
+    public boolean shotWindowEnabled;
+
+    /**
      * Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the
      * Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase;
-     * interpolated and clamped at the ends. A volley ends when auto.balls_per_volley_count balls
-     * are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is
-     * the fallback when this table is empty.
+     * interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when
+     * auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam
+     * safety net. auto.shoot_wait_ms is the fallback when this table is empty.
      */
     public double[] shotTimePoints;
 
@@ -3318,6 +3577,241 @@ public final class config {
      * park deadline.
      */
     public int parkUpdateMs;
+
+    /**
+     * Down AUTO: seconds to sit at the start after START before driving. The park deadline still
+     * cuts a long wait short, so the robot always reaches its end pose.
+     */
+    public double downWaitSec;
+
+    /**
+     * Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE +
+     * PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only).
+     */
+    public boolean downPark;
+
+    /**
+     * Target power (0.0 to 1.0) for the single intake motor while collecting in TeleOp or
+     * autonomous.
+     */
+    public double intakePower;
+
+    /**
+     * CELL A routine: collect POLLEN from the alliance's side-wall FLOWER after the first volley.
+     */
+    public boolean cellACollectFlower;
+
+    /**
+     * CELL A routine: drive around the HIVE on the FLOWER-side lane and launch a second volley into
+     * CELL B once it is upward-facing. Without cell_a_collect_flower this fires only POLLEN left
+     * over when the TIP stopped the first volley.
+     */
+    public boolean cellASecondVolley;
+
+    /**
+     * CELL B routine: collect POLLEN from the alliance's rear-wall FLOWER and launch a second
+     * volley.
+     */
+    public boolean cellBCollectFlower;
+  }
+
+  public static final class UpAuto {
+    /**
+     * Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least
+     * sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and
+     * the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves
+     * the rest of the zone to the partner.
+     */
+    public Pose park;
+
+    /**
+     * Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the
+     * perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a
+     * FLOWER (G304).
+     */
+    public Pose start;
+
+    // Shared operational parameters (same for both alliances)
+    /**
+     * Whether an autonomous volley also ends when its shot_time_points window expires. false: it
+     * ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or
+     * the robot is known empty), and the park guard still ends the routine at its park deadline.
+     */
+    public boolean shotWindowEnabled;
+
+    /**
+     * Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the
+     * Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase;
+     * interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when
+     * auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam
+     * safety net. auto.shoot_wait_ms is the fallback when this table is empty.
+     */
+    public double[] shotTimePoints;
+
+    /**
+     * Fallback autonomous shoot window (milliseconds), used only when auto.shot_time_points is
+     * empty.
+     */
+    public int shootWaitMs;
+
+    /**
+     * SCORING ELEMENTS expected per autonomous volley. A volley ends when this many shots are
+     * counted by shooter.ball_detection or the shot window expires.
+     */
+    public int ballsPerVolleyCount;
+
+    /**
+     * Autonomous wait (milliseconds) for the target CELL to be seen upward-facing before giving up
+     * on it. The robot never launches at a downward-facing CELL (G417).
+     */
+    public int tipWaitMs;
+
+    /**
+     * Autonomous time (milliseconds) spent at a FLOWER retrieval opening with the intake running.
+     */
+    public int collectDwellMs;
+
+    /**
+     * AUTO park deadline margin (milliseconds): the routine is cancelled and the robot parks once
+     * the time left is no more than the estimated drive to the park pose (stopping, then the
+     * HIVE-avoiding route) plus this.
+     */
+    public int parkMarginMs;
+
+    /**
+     * Latest AUTO park start (milliseconds before the end): the robot parks at this point even if
+     * the estimated drive plus park_margin_ms is shorter, or when no estimate exists.
+     */
+    public int parkReserveMs;
+
+    /**
+     * How often (milliseconds) AUTO re-plans the park route and re-estimates the drive time for the
+     * park deadline.
+     */
+    public int parkUpdateMs;
+
+    /**
+     * Down AUTO: seconds to sit at the start after START before driving. The park deadline still
+     * cuts a long wait short, so the robot always reaches its end pose.
+     */
+    public double downWaitSec;
+
+    /**
+     * Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE +
+     * PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only).
+     */
+    public boolean downPark;
+
+    /**
+     * Target power (0.0 to 1.0) for the single intake motor while collecting in TeleOp or
+     * autonomous.
+     */
+    public double intakePower;
+
+    /**
+     * CELL A routine: collect POLLEN from the alliance's side-wall FLOWER after the first volley.
+     */
+    public boolean cellACollectFlower;
+
+    /**
+     * CELL A routine: drive around the HIVE on the FLOWER-side lane and launch a second volley into
+     * CELL B once it is upward-facing. Without cell_a_collect_flower this fires only POLLEN left
+     * over when the TIP stopped the first volley.
+     */
+    public boolean cellASecondVolley;
+
+    /**
+     * CELL B routine: collect POLLEN from the alliance's rear-wall FLOWER and launch a second
+     * volley.
+     */
+    public boolean cellBCollectFlower;
+  }
+
+  public static final class DownAuto {
+    /**
+     * Down AUTO with auto.down_park false: the pose it drives to after the wait, off the wall for
+     * LEAVE and clear of the LOADING ZONE (no PARK).
+     */
+    public Pose leave;
+
+    /**
+     * Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least
+     * sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and
+     * the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves
+     * the rest of the zone to the partner.
+     */
+    public Pose park;
+
+    // Shared operational parameters (same for both alliances)
+    /**
+     * Whether an autonomous volley also ends when its shot_time_points window expires. false: it
+     * ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or
+     * the robot is known empty), and the park guard still ends the routine at its park deadline.
+     */
+    public boolean shotWindowEnabled;
+
+    /**
+     * Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the
+     * Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase;
+     * interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when
+     * auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam
+     * safety net. auto.shoot_wait_ms is the fallback when this table is empty.
+     */
+    public double[] shotTimePoints;
+
+    /**
+     * Fallback autonomous shoot window (milliseconds), used only when auto.shot_time_points is
+     * empty.
+     */
+    public int shootWaitMs;
+
+    /**
+     * SCORING ELEMENTS expected per autonomous volley. A volley ends when this many shots are
+     * counted by shooter.ball_detection or the shot window expires.
+     */
+    public int ballsPerVolleyCount;
+
+    /**
+     * Autonomous wait (milliseconds) for the target CELL to be seen upward-facing before giving up
+     * on it. The robot never launches at a downward-facing CELL (G417).
+     */
+    public int tipWaitMs;
+
+    /**
+     * Autonomous time (milliseconds) spent at a FLOWER retrieval opening with the intake running.
+     */
+    public int collectDwellMs;
+
+    /**
+     * AUTO park deadline margin (milliseconds): the routine is cancelled and the robot parks once
+     * the time left is no more than the estimated drive to the park pose (stopping, then the
+     * HIVE-avoiding route) plus this.
+     */
+    public int parkMarginMs;
+
+    /**
+     * Latest AUTO park start (milliseconds before the end): the robot parks at this point even if
+     * the estimated drive plus park_margin_ms is shorter, or when no estimate exists.
+     */
+    public int parkReserveMs;
+
+    /**
+     * How often (milliseconds) AUTO re-plans the park route and re-estimates the drive time for the
+     * park deadline.
+     */
+    public int parkUpdateMs;
+
+    /**
+     * Down AUTO: seconds to sit at the start after START before driving. The park deadline still
+     * cuts a long wait short, so the robot always reaches its end pose.
+     */
+    public double downWaitSec;
+
+    /**
+     * Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE +
+     * PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only).
+     */
+    public boolean downPark;
 
     /**
      * Target power (0.0 to 1.0) for the single intake motor while collecting in TeleOp or

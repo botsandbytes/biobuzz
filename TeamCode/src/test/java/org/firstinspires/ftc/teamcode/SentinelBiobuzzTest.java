@@ -242,15 +242,28 @@ public class SentinelBiobuzzTest {
   // PARK / LEAVE
 
   @Test
-  public void testParkedMeansTheFootprintOverlapsTheLoadingZone() {
+  public void testParkedMeansAWheelIsInTheLoadingZone() {
     Envelope zone = red.field().loadingZone();
     // The zone's x extent is the wall to the zone depth; a robot against the wall overlaps it.
     Pose inside = new Pose(HALF + 1.0, (zone.getMinY() + zone.getMaxY()) / 2.0, 0);
     assertTrue(red.isParked(inside));
 
-    // Partly in is parked: only the corner reaches into the zone.
+    // Only a frame corner over the zone, every wheel outside it: not parked.
     Pose corner = new Pose(zone.getMaxX() + HALF - 1.0, zone.getMinY() - HALF + 1.0, 0);
-    assertTrue(red.isParked(corner));
+    assertFalse(red.isParked(corner));
+
+    // One wheel in is parked. Heading 90: the front-left wheel is 4.25 in ahead of and 6.5 in left
+    // of the spin centre (config.chassis); put it 1 in inside the zone's audience-side corner.
+    var c = config.chassis;
+    double rear = (c.back_axle_from_back_in + c.front_axle_from_back_in) / 2.0;
+    double ahead = c.front_axle_from_back_in - rear;
+    double left = c.wheel_track_in / 2.0;
+    Pose oneWheel =
+        new Pose(zone.getMaxX() - 1.0 + left, zone.getMinY() + 1.0 - ahead, Math.PI / 2);
+    assertTrue(red.isParked(oneWheel));
+    double[] depths = red.wheelDepthsInLoadingZone(oneWheel);
+    assertEquals(1, java.util.Arrays.stream(depths).filter(d -> d >= 0).count());
+    assertEquals(1.0, java.util.Arrays.stream(depths).max().orElseThrow(), 1e-9);
 
     // Clear of the zone is not.
     assertFalse(red.isParked(new Pose(zone.getMaxX() + HALF + 1.0, zone.getMinY() + 5, 0)));
@@ -335,8 +348,8 @@ public class SentinelBiobuzzTest {
     assertTrue(offField.get().contains("leaves the field"), offField.get());
     assertTrue(offField.get().contains("(3.0, 20.0)"), offField.get());
 
-    Optional<String> hive =
-        red.routeProblem(List.of(new Pose(20, 20, 0), new Pose(CENTRE, CENTRE, 0)), true);
+    Pose support = new Pose(red.field().hiveFrame().getMinX(), CENTRE, 0);
+    Optional<String> hive = red.routeProblem(List.of(new Pose(20, 20, 0), support), true);
     assertTrue(hive.isPresent());
     assertTrue(hive.get().contains("hits the HIVE frame"), hive.get());
 
@@ -359,8 +372,8 @@ public class SentinelBiobuzzTest {
 
   @Test
   public void testRouteProblemReportsTheFirstViolationInOrder() {
-    List<Pose> twoProblems =
-        List.of(new Pose(20, 20, 0), new Pose(CENTRE, CENTRE, 0), new Pose(1, 1, 0));
+    Pose support = new Pose(red.field().hiveFrame().getMinX(), CENTRE, 0);
+    List<Pose> twoProblems = List.of(new Pose(20, 20, 0), support, new Pose(1, 1, 0));
     Optional<String> problem = red.routeProblem(twoProblems, true);
     assertTrue(problem.get().contains("HIVE"), problem.get());
     assertFalse(problem.get().contains("leaves the field"), problem.get());
@@ -375,7 +388,7 @@ public class SentinelBiobuzzTest {
     assertTrue(hit.get().contains("HIVE"), hit.get());
 
     // Beside it, parallel, on the audience side.
-    var beside = pline(new Pose(15, 30, 0), new Pose(60, 30, 0));
+    var beside = pline(new Pose(15, 30, 0), new Pose(58, 30, 0));
     assertEquals(Optional.empty(), red.routeProblem(beside, 0.02, true));
 
     // A step coarser than the whole path samples just the end points, so it can miss a middle.
@@ -410,8 +423,8 @@ public class SentinelBiobuzzTest {
     assertTrue(red.routeProblem(throughRed, 0.02, true).isPresent());
     assertTrue(blue.routeProblem(throughBlue, 0.02, true).isPresent());
 
-    var besideRed = pline(new Pose(15, 30, 0), new Pose(60, 30, 0));
-    var besideBlue = pline(twin(new Pose(15, 30, 0)), twin(new Pose(60, 30, 0)));
+    var besideRed = pline(new Pose(15, 30, 0), new Pose(58, 30, 0));
+    var besideBlue = pline(twin(new Pose(15, 30, 0)), twin(new Pose(58, 30, 0)));
     assertEquals(Optional.empty(), red.routeProblem(besideRed, 0.02, true));
     assertEquals(Optional.empty(), blue.routeProblem(besideBlue, 0.02, true));
 
@@ -443,10 +456,12 @@ public class SentinelBiobuzzTest {
 
     assertTrue(route.size() >= 2, "a detour has at least one lane waypoint");
     assertSame(park, route.get(route.size() - 1), "always ends on the park pose");
+    var chassis = config.chassis;
+    double rear = (chassis.back_axle_from_back_in + chassis.front_axle_from_back_in) / 2.0;
     double laneX =
         CENTRE
             - config.field.hive.frame_width_in / 2.0
-            - Math.hypot(config.sentinel.robot_width / 2.0, config.sentinel.robot_width / 2.0)
+            - Math.hypot(chassis.robot_length_in - rear, chassis.robot_width_in / 2.0)
             - Sentinel.PARK_LANE_MARGIN_IN;
     assertEquals(
         laneX, route.get(0).x(), 1e-9, "first waypoint is in the lane, level with the robot");

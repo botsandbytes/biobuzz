@@ -24,6 +24,9 @@ public class TunerPoseSafetyTest {
   private static void assertDrivesFreely(Pose start, double travel, boolean strafe, String what) {
     Casablanca casablanca = new Casablanca(new Sentinel(Alliance.RED));
     Casablanca.enableInputSmoothing = false;
+    // With protection off this would pass vacuously; the lane must stay clear if it is turned on.
+    Casablanca.enableDepthProtection = true;
+    Casablanca.enableSideProtection = true;
     for (double sign : new double[] {1, -1}) {
       Vector2D axis = (strafe ? Vector2D.cartesian(0, sign) : Vector2D.cartesian(sign, 0));
       Vector2D fieldStep = axis.rotate(start.heading());

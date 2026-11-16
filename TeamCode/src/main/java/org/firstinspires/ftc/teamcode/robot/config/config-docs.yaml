@@ -507,18 +507,47 @@ rpm_update_deadband:
   desc: "Minimum change in solved RPM (ticks/s) before the flywheel setpoint is re-commanded. Every setpoint write discards the flywheel's accumulated anti-windup integral, so without a deadband a continuously drifting target would keep the integrator reset and the flywheel permanently short of speed."
   min: 0.0
 
+shot_window_enabled:
+  desc: "Whether an autonomous volley also ends when its shot_time_points window expires. false: it ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or the robot is known empty), and the park guard still ends the routine at its park deadline."
+
 shot_time_points:
-  desc: "Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase; interpolated and clamped at the ends. A volley ends when auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is the fallback when this table is empty."
+  desc: "Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase; interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is the fallback when this table is empty."
 
 shoot_wait_ms:
   desc: "Fallback autonomous shoot window (milliseconds), used only when auto.shot_time_points is empty."
   min: 0
 
 start:
-  desc: "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304)."
+  desc: "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304)."
+
+reset:
+  desc: "TeleOp odometry reset pose (driver BACK, also during INIT): the robot pushed into the corner of the audience wall and the RED alliance wall, back on the audience wall, left side on the RED wall, facing the rear wall. BLUE uses the same corner (k)."
+
+robot_length_in:
+  desc: "Robot length, back edge to front edge (inches). With the axle positions it places the spin centre (Pedro's pose) for the start and reset poses."
+  min: 0.0
+
+robot_width_in:
+  desc: "Robot width, left edge to right edge (inches). The spin centre is on the centre line, robot_width_in / 2 from each side."
+  min: 0.0
+
+back_axle_from_back_in:
+  desc: "Back wheel centre's distance from the robot's back edge (inches). The spin centre is midway between the axles."
+  min: 0.0
+
+front_axle_from_back_in:
+  desc: "Front wheel centre's distance from the robot's back edge (inches). The spin centre is midway between the axles."
+  min: 0.0
+
+wheel_track_in:
+  desc: "Left wheel centre to right wheel centre (inches), wheels centred side to side. With the axle positions it places the four wheel contacts PARK is judged by."
+  min: 0.0
 
 park:
-  desc: "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO."
+  desc: "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner."
+
+leave:
+  desc: "Down AUTO with auto.down_park false: the pose it drives to after the wait, off the wall for LEAVE and clear of the LOADING ZONE (no PARK)."
 
 max_speed:
   desc: "Maximum speed scaler (0.0 to 1.0) applied to chassis manual TeleOp drive inputs."
@@ -529,7 +558,7 @@ field_centric:
   desc: "When true, driver translation sticks are interpreted in the field frame (stick direction is a fixed field direction regardless of robot heading). When false, sticks are robot-relative."
 
 field_centric_offset_deg:
-  desc: "Field heading (degrees) that a fully-forward driver stick should drive toward when field_centric is true. 90 means stick-forward drives along field +Y, i.e. away from the driver wall at y=0. Set this to whatever direction is 'away' from where the drivers physically stand."
+  desc: "Extra rotation (degrees, counter-clockwise) of the field-centric stick frame. 0: stick-forward drives straight away from the drivers' own alliance wall (+x for RED, -x for BLUE, applied by alliance in Casablanca)."
   min: -360.0
   max: 360.0
 
@@ -598,6 +627,16 @@ manual_rev_power:
   desc: "Target flywheel power ratio (0.0 to 1.0) for manual rev command in TeleOp."
   min: 0.0
   max: 1.0
+
+shot_distance_in:
+  desc: "Horizontal distance (inches) from the turret axis to the upward CELL opening that TeleOp aim-and-shoot drives to (straight toward or away from the CELL) before feeding. Keep it inside shooter.ballistics min/max_valid_distance."
+  min: 12.0
+  max: 72.0
+
+shot_position_tolerance_in:
+  desc: "Inches. Aim-and-shoot only drives when the robot is more than this far off shot_distance_in, and feeds only once the robot is within this of the spot it drove to."
+  min: 0.25
+  max: 6.0
 
 max_loop_dt:
   desc: "Maximum elapsed seconds used by the shared slew limiter per update; prevents a large power step after a stalled loop."
@@ -878,7 +917,31 @@ frame_depth_in:
 
 bottom_height_in:
   desc: "Lowest HIVE point above the TILES (inches). TU05 corrected V1's 25.5 in typo to 30.6 in; a robot must stay below this to pass under the HIVE."
+
+route_opening_width_in:
+  desc: "Conservative clear width (inches) between the HIVE side supports for the route opening height, based on the official STEP model and field tolerance."
   min: 0.0
+
+route_opening_height_in:
+  desc: "Maximum robot driving height (inches) covered by the modeled HIVE opening."
+  min: 0.0
+
+drive_height_in:
+  desc: "Maximum robot height above the tiles (inches) in the configuration used for path following, including any moving mechanisms."
+  min: 0.0
+
+allow_under_hive_routes:
+  desc: "Allow generated paths through the HIVE opening when the robot's driving height and swept footprint fit."
+
+route_wall_clearance_in:
+  desc: "Minimum planned clearance (inches) between the chassis and the perimeter walls. A path may depart from a wall-touching start."
+  min: 0.0
+  min: 0.0
+
+route_start_tolerance_in:
+  desc: "Inches. A measured route start (Sentinel.routeAround, parkRoute) whose chassis reads up to this far past a perimeter wall is moved straight in to the wall and planned from there: a robot pushed against a wall reads slightly past it (Pinpoint float rounding, heading noise). Farther out, no route is planned."
+  min: 0.0
+  max: 3.0
 
 start_y_in:
   desc: "RED LOADING ZONE start along the RED alliance wall (inches from the audience wall). BLUE is the 180-degree rotation."
@@ -999,6 +1062,9 @@ max_correction_in:
   desc: "Reject a vision relocalization that moves the pose farther than this (inches) from odometry; that is a misidentified or moving CELL, not drift."
   min: 0.0
 
+footprint_safety_enabled:
+  desc: "True: the footprint gates refuse motion (the driver's turn near the HIVE, a shot's turn in place, TeleOp pose holds that would cross the HIVE or a wall) and AutoRouteSafetyTest checks every AUTO route. False: none of these refuse anything and the route checks are skipped; the park route still plans around the HIVE."
+
 protect_full_hive_footprint:
   desc: "True protects the whole HIVE frame base rectangle (the robot never drives under the HIVE). False protects only the two 2 in frame foot bars, for a robot built to pass under the HIVE; the inward-leaning A-frame legs are not modelled, so verify leg clearance for the robot's height."
 
@@ -1054,6 +1120,14 @@ park_update_ms:
   desc: "How often (milliseconds) AUTO re-plans the park route and re-estimates the drive time for the park deadline."
   min: 20
 
+down_wait_sec:
+  desc: "Down AUTO: seconds to sit at the start after START before driving. The park deadline still cuts a long wait short, so the robot always reaches its end pose."
+  min: 0.0
+  max: 30.0
+
+down_park:
+  desc: "Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE + PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only)."
+
 cell_a_collect_flower:
   desc: "CELL A routine: collect POLLEN from the alliance's side-wall FLOWER after the first volley."
 
@@ -1065,7 +1139,16 @@ cell_b_collect_flower:
   suppress_similarity_check: true
 
 flower_hold_enabled:
-  desc: "TeleOp: driver dpad left drives to and holds the FLOWER pickup pose. False when the robot cannot take POLLEN from a FLOWER; the button then does nothing."
+  desc: "TeleOp: the driver D-pad drives around the HIVE to the FLOWER in that direction (as the driver sees the field) and holds its pickup pose, a quarter turn of poses.<alliance>.flower about the field centre. False: the D-pad does nothing."
+
+flower_flap_lead_in:
+  desc: "Inches short of the FLOWER pickup pose (backed off along its heading) where the driver D-pad FLOWER trip stops to lower the flower flap before driving the rest of the way in."
+  min: 0.0
+  max: 12.0
+
+flower_flap_settle_ms:
+  desc: "Milliseconds the D-pad FLOWER trip waits after lowering the flower flap before driving the last flower_flap_lead_in inches. The Axon sweeps about 280 degrees from UP to DOWN."
+  min: 0
 
 eject_power:
   desc: "Intake power (negative = reverse) for the operator eject button, used to spit out a fifth SCORING ELEMENT (G407) or opponent NECTAR (G408)."
@@ -1124,6 +1207,14 @@ wall_contact_tolerance_in:
 park_lane_margin_in:
   desc: "Clearance (inches) between the HIVE frame and the robot's turning radius in the emergency park lane."
   min: 0.0
+park_wheel_margin_in:
+  desc: "Inches. Every configured park pose has exactly one wheel contact at least this far inside the LOADING ZONE and the other three at least this far outside it (AutoRouteSafetyTest). Half a wheel width plus end-of-path error."
+  min: 0.0
+route_corner_radius_in:
+  desc: "Inches. A driven go-around (Sentinel.routeAround, via PathUtil.followAround) rounds each corner into a quadratic Bezier curve starting and ending this far either side of the corner (at most 45% of either leg), so the robot does not stop at corners. Each curve is re-checked against the HIVE frame and the walls; a corner whose curve is not clear stays sharp."
+  min: 0.0
+  max: 36.0
+
 route_sample_step:
   desc: "Parameter increment for autonomous and assisted-drive path safety sampling. Smaller values check more positions."
   min: 0.001
@@ -1288,7 +1379,7 @@ max_update_gap_sec:
 transfer_servo_name:
   desc: "Continuous-rotation intake transfer servo hardware name; configured on Control Hub servo port 5."
 transfer_power:
-  desc: "Transfer servo power while the shooter target is positive, including spin-up. Independent of intake collection, feed gates, eject, and inventory cap; zero when shooter is stopped or transfer is manually stopped."
+  desc: "Transfer servo power during shot feeding or a manual rev. During a shot, transfer follows the resolved feed target, including explicit manual feed."
   min: 0.0
   max: 1.0
 transfer_reversed:

@@ -12,8 +12,8 @@ import org.firstinspires.ftc.teamcode.records.Alliance;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 
 /**
- * Safe fallback: leave the wall and park partly in the LOADING ZONE. Worth LEAVE (3) + PARK (5),
- * and two of these on one alliance reach the 16-point SWARM ranking point at standard events.
+ * Start in the corner of the alliance wall and the far wall, next to the LOADING ZONE, and park
+ * with one wheel in it. No shot. Worth LEAVE (3) + PARK (5).
  */
 // Paths are assigned by buildPaths(), which init() calls, not by a constructor.
 @SuppressWarnings("NullAway.Init")

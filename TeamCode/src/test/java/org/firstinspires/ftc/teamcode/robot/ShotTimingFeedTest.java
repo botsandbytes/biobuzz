@@ -20,7 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ShotTimingFeedTest {
   @ParameterizedTest
   @ValueSource(booleans = {false, true})
-  void benchFeedsAtSpeedWhileAutomaticShotsStillRequireCalibration(boolean bench) {
+  void bothFeedActuatorsObeySpinUpAndAutomaticShotGates(boolean bench) {
     config.shooter.shot_table.calibrated = false;
     HardwareMap map = mock(HardwareMap.class);
     DcMotorEx motor = mock(DcMotorEx.class);
@@ -58,7 +58,7 @@ class ShotTimingFeedTest {
       controller.periodic();
       intake.periodic();
       verify(motor).setPower(0);
-      verify(transfer).setPower(config.intake.transfer_power);
+      verify(transfer).setPower(0);
       assertFalse(controller.isFeedCommanded());
 
       when(shooter.getShooterVelocity()).thenReturn(config.shooter.constant_rpm);
@@ -67,7 +67,7 @@ class ShotTimingFeedTest {
       intake.periodic();
       assertEquals(bench, controller.isFeedCommanded());
       verify(motor).setPower(bench ? config.shooter.feed_intake_power : 0);
-      verify(transfer).setPower(config.intake.transfer_power);
+      verify(transfer).setPower(bench ? config.intake.transfer_power : 0);
       if (bench) {
         assertEquals(Intake.Mode.FEED, intake.mode());
         verify(turret, never()).setAimMode(Turret.AimMode.AIM_AT_TARGET);
@@ -78,7 +78,7 @@ class ShotTimingFeedTest {
       controller.periodic();
       intake.periodic();
       verify(motor).setPower(0);
-      verify(transfer).setPower(config.intake.transfer_power);
+      verify(transfer).setPower(0);
       assertFalse(controller.isFeedCommanded());
 
       controller.stopShot();

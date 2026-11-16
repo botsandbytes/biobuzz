@@ -80,6 +80,33 @@ public class IntakeCapacityTest {
   }
 
   @Test
+  void transferStaysOffWhileTheIntakeIsCollecting() {
+    HardwareMap map = mock(HardwareMap.class);
+    DcMotorEx motor = mock(DcMotorEx.class);
+    CRServo transfer = mock(CRServo.class);
+    when(map.get(DcMotorEx.class, "rightIntake")).thenReturn(motor);
+    when(map.get(CRServo.class, config.intake.transfer_servo_name)).thenReturn(transfer);
+    config.intake.transfer_power = 0.4;
+    Intake intake = new Intake(map, () -> 0.6);
+    intake.inventory().set(0);
+
+    intake.run(0.7);
+    intake.periodic();
+    verify(motor).setPower(0.7);
+    verify(transfer).setPower(0.0); // Shooter spinning, but the intake is collecting.
+
+    clearInvocations(motor, transfer);
+    intake.feed(0.7);
+    intake.periodic();
+    verify(transfer).setPower(0.4); // Feeding a shot runs it.
+
+    clearInvocations(motor, transfer);
+    intake.stop();
+    intake.periodic();
+    verify(transfer).setPower(0.4); // Intake off: it follows the shooter again.
+  }
+
+  @Test
   void transferFollowsShooterIndependentlyOfIntakeAndManualStopRemainsLatched() {
     HardwareMap map = mock(HardwareMap.class);
     DcMotorEx motor = mock(DcMotorEx.class);

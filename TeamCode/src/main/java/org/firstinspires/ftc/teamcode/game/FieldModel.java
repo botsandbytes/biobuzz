@@ -201,8 +201,17 @@ public final class FieldModel {
 
   /** The two triangular frame bases at either end of the HIVE frame. */
   public List<Envelope> hiveFrameBases() {
+    return hiveFrameSides(d.frameBaseWidthIn());
+  }
+
+  /** Conservative floor projection of both side supports at the configured passage height. */
+  public List<Envelope> hivePassageSides(double openingWidth) {
+    return hiveFrameSides((d.frameWidthIn() - openingWidth) / 2.0);
+  }
+
+  private List<Envelope> hiveFrameSides(double stripWidth) {
     Envelope frame = hiveFrame();
-    double w = Math.min(d.frameBaseWidthIn(), frame.getWidth() / 2.0);
+    double w = Math.clamp(stripWidth, 0.0, frame.getWidth() / 2.0);
     return List.of(
         new Envelope(frame.getMinX(), frame.getMinX() + w, frame.getMinY(), frame.getMaxY()),
         new Envelope(frame.getMaxX() - w, frame.getMaxX(), frame.getMinY(), frame.getMaxY()));
@@ -231,6 +240,24 @@ public final class FieldModel {
     return List.of(
         fromRedFrame(d.flowerWallOffsetIn(), d.flowerCornerOffsetIn()),
         fromRedFrame(d.flowerCornerOffsetIn(), d.sizeIn() - d.flowerWallOffsetIn()));
+  }
+
+  /**
+   * One approach pose for each of the field's four FLOWERS: {@code flowerApproach}, a pose that
+   * reaches one FLOWER, turned 0, 90, 180 and 270 degrees counter-clockwise about the field centre.
+   * The four FLOWERS sit at quarter turns of each other about the centre (this alliance's two in
+   * {@link #allianceSideFlowers()}, and their half-turns on the other side), so the same approach
+   * reaches each one.
+   */
+  public List<Pose> flowerApproaches(Pose flowerApproach) {
+    Pose[] approaches = new Pose[4];
+    for (int k = 0; k < approaches.length; k++) {
+      approaches[k] =
+          PoseFactory.radians()
+              .rotateAround(d.center(), d.center(), k * Math.PI / 2)
+              .of(flowerApproach.x(), flowerApproach.y(), flowerApproach.heading());
+    }
+    return List.of(approaches);
   }
 
   /** This alliance's side of the field (G304.A starting volume, G402 AUTO priority). */

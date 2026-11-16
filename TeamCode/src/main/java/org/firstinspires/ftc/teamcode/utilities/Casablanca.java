@@ -211,6 +211,17 @@ public class Casablanca {
     }
   }
 
+  /**
+   * Forgets the heading the lock latched, so it captures the robot's heading again once the robot
+   * settles. Call when something other than the driver (a pose hold, an aimed shot) has turned the
+   * robot: otherwise the lock swings it straight back to the heading it held before. Unlike {@link
+   * #reset()} it leaves the driver's target lock and the armed aim alone.
+   */
+  public void relatchHeading() {
+    headingLockInitialized = false;
+    headingPidf.reset();
+  }
+
   private double armedAimHeadingTarget = 0.0;
   private boolean armedAimActive = false;
 
@@ -451,10 +462,12 @@ public class Casablanca {
     double lookaheadRad = Math.abs(currentAngularVelocity) * rotationLookaheadTimeSeconds;
     lastLookaheadRad = lookaheadRad;
     lastAngularVelocityUsed = currentAngularVelocity;
+    // A non-finite turn is always dropped; the HIVE/wall sweep only while footprint safety is on.
     boolean rotationSafe =
         Double.isFinite(turn)
             && Double.isFinite(lookaheadRad)
-            && sentinel.isRotationSafe(pose, turn, lookaheadRad);
+            && (!sentinel.footprintSafetyEnabled()
+                || sentinel.isRotationSafe(pose, turn, lookaheadRad));
     lastRotationSafe = rotationSafe;
     if (turn != 0 && !rotationSafe) {
       turn = 0;

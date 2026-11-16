@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.robot;
 
+import static com.pedropathing.ivy.commands.Commands.instant;
 import static com.pedropathing.ivy.commands.Commands.lazy;
 import static com.pedropathing.ivy.commands.Commands.waitMs;
 import static com.pedropathing.ivy.commands.Commands.waitUntil;
@@ -26,6 +27,7 @@ import org.firstinspires.ftc.teamcode.game.HiveTracker;
 import org.firstinspires.ftc.teamcode.records.BallType;
 import org.firstinspires.ftc.teamcode.records.BallisticsParameters;
 import org.firstinspires.ftc.teamcode.records.CellTarget;
+import org.firstinspires.ftc.teamcode.records.HiveCell;
 import org.firstinspires.ftc.teamcode.records.ShotInputs;
 import org.firstinspires.ftc.teamcode.records.ShotSolution;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
@@ -65,6 +67,13 @@ public class ShotController {
 
   /** Latching state of the feed gate; see {@link #updateFeedGate()}. */
   private boolean feeding = false;
+
+  // TeleOp's operator owns the intake (see setOperatorIntake). Main-thread only.
+  private boolean operatorIntake = false;
+
+  // Where a manual shot drove to (manualShotCommand); it feeds only once the robot is there. Null
+  // for every other shot, which holds where it already is. Main-thread only.
+  private @Nullable Pose shotPosition = null;
 
   /** Whether the last {@link #periodic()} actually fed the shooter, i.e. every gate agreed. */
   private boolean feedCommanded = false;
@@ -166,6 +175,8 @@ public class ShotController {
     this.requireValidSolution = requireValidSolution;
     this.commandedSolvedRpm = Double.NaN;
     this.feeding = false;
+    this.feedCommanded = false;
+    this.shotPosition = null;
     this.timer.reset();
     this.ballDetector = newBallDetector();
     this.ballDetectionArmed = false;
@@ -173,18 +184,32 @@ public class ShotController {
     // A solution left over from before this shot was solved for whatever pose and HIVE state held
     // then. Nothing may fire until the solver has answered for now.
     invalidateSolve();
+    intake.setShotTransferGated(true);
     shooter.setTargetPower(power);
     if (checkAlignment && turret != null && turret.isEnabled()) {
       turret.setAimMode(Turret.AimMode.AIM_AT_TARGET);
     }
   }
 
+  /**
+   * TeleOp only: the operator is running the intake by hand (the A toggle, or a held eject). While
+   * set, a closed feed gate leaves the intake to the operator instead of stopping it, so the
+   * operator can feed a shot the gate cannot clear yet (no calibrated shot table, no trusted pose),
+   * at their own call, exactly as operator X plus A always could. An open gate still feeds by
+   * itself, and a lost pose still stops the intake. Autonomous never sets it.
+   */
+  public void setOperatorIntake(boolean operatorOwnsIntake) {
+    operatorIntake = operatorOwnsIntake;
+  }
+
   public void stopShot() {
     this.active = false;
     this.feedCommanded = false;
+    this.shotPosition = null;
     invalidateSolve();
     shooter.setTargetPower(0.0);
     intake.stop();
+    intake.setShotTransferGated(false);
     turret.setTargetAzimuth(Double.NaN);
     if (casablanca != null) {
       casablanca.setArmedAimTarget(0.0, false);
@@ -273,8 +298,8 @@ public class ShotController {
   }
 
   /**
-   * Hold position and shoot at the upward CELL until cancelled. TeleOp binds this to a held
-   * trigger; autonomous wraps it in {@link #volleyCommand(Follower, int)}.
+   * Hold position and shoot at the upward CELL until cancelled, feeding only when every gate
+   * passes. Autonomous wraps it in {@link #volleyCommand(Follower, int)}.
    */
   public CommandBuilder aimAndShootCommand(Follower follower) {
     return Command.build()
@@ -288,11 +313,114 @@ public class ShotController {
   }
 
   /**
+   * TeleOp's aim-and-shoot, until cancelled: drives forward or back to {@code
+   * teleop.shot_distance_in} from the upward CELL if it is not there ({@link #rangedShotHoldPose}),
+   * turns to face it, spins the flywheel to the shot table's speed for that spot ({@link
+   * #tablePower}), and runs the intake once the flywheel is in band, the robot is aimed and it has
+   * reached that position. A manual shot (the drivers' call, like any fixed-power shot): it skips
+   * the solution and HIVE-settle gates, so it fires before the shot table is marked calibrated. It
+   * still only aims at the CELL the HIVE tracker believes is up (G417).
+   */
+  public CommandBuilder manualShotCommand(Follower follower) {
+    return Command.build()
+        .setStart(
+            () -> {
+              Pose position = rangedShotHoldPose(follower.pose());
+              follower.hold(position);
+              // Pinned for the whole shot (useSolvedRpm false): the solver's live answer would
+              // chase the distance while the robot drives there.
+              startShot(tablePower(position), true, false, false);
+              shotPosition = position;
+            })
+        .setEnd(interrupted -> stopShot())
+        .requiring(follower, shooter, turret, intake);
+  }
+
+  /**
+   * TeleOp's shot from the one fixed spot, until cancelled: spins the flywheel to {@code power} and
+   * runs the intake as soon as the flywheel is in band. No driving, no aiming, no shot table: the
+   * drivers put the robot on the spot (driver LT/RT drive there and hold it). It leaves the drive
+   * and the turret alone, so that hold keeps running while it shoots. Still the CELL the HIVE
+   * tracker believes is up is the only one the spot faces (G417).
+   */
+  public CommandBuilder fixedShotCommand(double power) {
+    return Command.build()
+        .setStart(() -> startShot(power, false, false, false))
+        .setEnd(interrupted -> stopShot())
+        .requiring(shooter, intake);
+  }
+
+  /**
+   * Flywheel power for a shot from {@code position}: the shot table's speed for the current ball
+   * type at that distance from the upward CELL, interpolated, clamped to the table's ends and to
+   * what the shooter can command. The table's calibrated flag only gates automatic feeding, so the
+   * rows are used either way. {@link Shooter#constantPower()} if the table cannot be read.
+   */
+  public double tablePower(Pose position) {
+    try {
+      double rpm = ShotTable.fromConfig(ballType).lookup(distanceToTarget(position)).rpm();
+      double power = rpm / config.shooter.max_rpm;
+      return Double.isFinite(power) ? Math.clamp(power, 0.0, 1.0) : Shooter.constantPower();
+    } catch (RuntimeException e) {
+      return Shooter.constantPower();
+    }
+  }
+
+  /**
+   * Where TeleOp's manual shot holds: on the line from the upward CELL's opening through the turret
+   * axis, with the axis {@code teleop.shot_distance_in} from the opening, facing it, so a
+   * fixed-power shot is always taken from the distance it was tuned at. The robot only drives
+   * (straight toward or away from the CELL) when the axis is more than {@code
+   * teleop.shot_position_tolerance_in} off that distance; otherwise this is {@link #shotHoldPose}.
+   * While footprint safety is on, a drive that would touch the HIVE frame or a wall is refused and
+   * it also falls back to {@link #shotHoldPose}.
+   */
+  public Pose rangedShotHoldPose(Pose here) {
+    CellTarget target = currentTarget();
+    Pose pivot = Turret.pivotPose(here);
+    double dx = pivot.x() - target.x();
+    double dy = pivot.y() - target.y();
+    double distance = Math.hypot(dx, dy);
+    var t = config.teleop;
+    if (!(distance > 0.0)
+        || Math.abs(distance - t.shot_distance_in) <= t.shot_position_tolerance_in) {
+      return shotHoldPose(here);
+    }
+    double scale = t.shot_distance_in / distance;
+    double facing = Math.atan2(-dy, -dx);
+    Pose goal =
+        Turret.robotPoseForPivot(
+            new Pose(target.x() + dx * scale, target.y() + dy * scale, facing));
+    if (casablanca != null
+        && casablanca.sentinel().footprintSafetyEnabled()
+        && casablanca.sentinel().routeProblem(straightDrive(here, goal), false).isPresent()) {
+      return shotHoldPose(here);
+    }
+    return goal;
+  }
+
+  /** Poses every inch along a straight drive, turning evenly the short way, for route checks. */
+  static java.util.List<Pose> straightDrive(Pose from, Pose to) {
+    int steps = Math.max(2, (int) Math.ceil(from.distance(to)));
+    double turn = AngleUnit.normalizeRadians(to.heading() - from.heading());
+    java.util.List<Pose> samples = new java.util.ArrayList<>(steps + 1);
+    for (int i = 0; i <= steps; i++) {
+      double f = (double) i / steps;
+      samples.add(
+          new Pose(
+              from.x() + f * (to.x() - from.x()),
+              from.y() + f * (to.y() - from.y()),
+              from.heading() + f * turn));
+    }
+    return samples;
+  }
+
+  /**
    * Where to hold the chassis for a shot. Normally right where it is, and the turret does the
    * aiming. If the turret is disabled, or the CELL is outside its travel, holding the current
-   * heading could never become aimed, so the robot turns in place to face the CELL — unless that
-   * rotation would swing the footprint into the HIVE frame, in which case it holds and the shot
-   * gate explains.
+   * heading could never become aimed, so the robot turns in place to face the CELL — unless
+   * footprint safety is on and that rotation would swing the footprint into the HIVE frame, in
+   * which case it holds and the shot gate explains.
    */
   public Pose shotHoldPose(Pose here) {
     CellTarget target = currentTarget();
@@ -305,32 +433,69 @@ public class ShotController {
     if (turretCovers) {
       return here;
     }
-    if (casablanca != null && !casablanca.sentinel().isRotationClear(here, bearing)) {
+    if (casablanca != null
+        && casablanca.sentinel().footprintSafetyEnabled()
+        && !casablanca.sentinel().isRotationClear(here, bearing)) {
       return here;
     }
     return new Pose(here.x(), here.y(), bearing);
   }
 
   /**
-   * One autonomous volley: shoot until {@code expectedBalls} shots are counted, the inventory is
-   * known to be empty, or the measured shoot window for this distance expires.
+   * One autonomous volley: shoot until {@code expectedBalls} shots are counted or the inventory is
+   * known to be empty. With {@code auto.shot_window_enabled} it also ends when the measured shoot
+   * window for this distance expires, even if the dip detector missed a ball; without it only the
+   * count ends it, and the park guard still ends the routine at its park deadline.
    *
    * <p>The count ticks on the first sample of a ball's flywheel dip, while that ball is still on
    * the wheel. Ending the volley there braked the flywheel under the last ball, so the volley also
    * waits for the wheel to recover from that dip.
    */
   public CommandBuilder volleyCommand(Follower follower, int expectedBalls) {
-    return lazy(
-        () ->
-            race(
-                aimAndShootCommand(follower),
-                sequential(
-                    waitUntil(
-                        () ->
-                            ballsFired >= expectedBalls
-                                || (ballsFired > 0 && intake.inventory().isEmpty())),
-                    waitUntil(() -> !ballDetector.isInDip())),
-                waitMs(ShotTimeTable.windowMsFor(distanceToTarget(follower.pose())))));
+    return lazy(() -> volleyOf(aimAndShootCommand(follower), follower, expectedBalls));
+  }
+
+  /**
+   * One autonomous volley at a calibrated pose and speed. Waits to reach the pose before starting
+   * the shooter and transfer, feeds when the flywheel is in band, and ends if the robot drifts or
+   * the HIVE tracker changes away from the requested CELL (G417).
+   */
+  public CommandBuilder fixedVolleyCommand(
+      Follower follower, Pose position, HiveCell cell, double power, int expectedBalls) {
+    return race(
+            waitUntil(() -> hive.upCell() != cell),
+            sequential(
+                instant(() -> follower.hold(position)),
+                waitUntil(() -> atFixedShotPose(follower.pose(), position)),
+                lazy(
+                    () ->
+                        race(
+                            waitUntil(() -> !atFixedShotPose(follower.pose(), position)),
+                            volleyOf(fixedShotCommand(power), follower, expectedBalls)))))
+        .requiring(follower, shooter, intake);
+  }
+
+  private static boolean atFixedShotPose(Pose current, Pose target) {
+    return ShotInputs.isFinitePose(current)
+        && current.distance(target) <= config.teleop.shot_position_tolerance_in
+        && Math.abs(AngleUnit.normalizeRadians(current.heading() - target.heading()))
+            <= Math.toRadians(config.casablanca.heading_lock.error_deadband_deg);
+  }
+
+  /** {@code shot} until the count (or, with the shoot window on, the window) ends the volley. */
+  private Command volleyOf(Command shot, Follower follower, int expectedBalls) {
+    var counted =
+        sequential(
+            waitUntil(
+                () ->
+                    ballsFired >= expectedBalls
+                        || (ballsFired > 0 && intake.inventory().isEmpty())),
+            waitUntil(() -> !ballDetector.isInDip()));
+    if (!config.auto.shot_window_enabled) {
+      return race(shot, counted);
+    }
+    return race(
+        shot, counted, waitMs(ShotTimeTable.windowMsFor(distanceToTarget(follower.pose()))));
   }
 
   /** Horizontal distance from the turret pivot at {@code pose} to the upward CELL opening. */
@@ -591,8 +756,12 @@ public class ShotController {
     }
 
     boolean isTurretAligned = true;
+    boolean inShotPosition = true;
     if (checkAlignment && pose != null) {
-      isTurretAligned = turret.isAimed(pose);
+      Pose position = shotPosition;
+      inShotPosition =
+          position == null || pose.distance(position) <= config.teleop.shot_position_tolerance_in;
+      isTurretAligned = inShotPosition && turret.isAimed(pose);
     }
 
     boolean isSolutionValid =
@@ -603,6 +772,8 @@ public class ShotController {
 
     if (!isFlywheelReady) {
       gateReason = "flywheel " + getFlywheelGateDetail();
+    } else if (!inShotPosition) {
+      gateReason = "driving to shooting distance";
     } else if (!isTurretAligned) {
       gateReason =
           turret.isEnabled() && turret.isTargetOutsideTravel()
@@ -648,7 +819,7 @@ public class ShotController {
             hive.isSettled());
     if (feedCommanded) {
       intake.feed(shooterConfig.feed_intake_power);
-    } else {
+    } else if (!operatorIntake) {
       intake.stop();
     }
   }

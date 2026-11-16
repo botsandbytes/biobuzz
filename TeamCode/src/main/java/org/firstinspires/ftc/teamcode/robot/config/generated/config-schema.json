@@ -143,6 +143,31 @@
               "description": "Lowest HIVE point above the TILES (inches). TU05 corrected V1's 25.5 in typo to 30.6 in; a robot must stay below this to pass under the HIVE.",
               "oneOf": [
                 {
+                  "type": "number"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "route_opening_width_in": {
+              "description": "Conservative clear width (inches) between the HIVE side supports for the route opening height, based on the official STEP model and field tolerance.",
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string",
+                  "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+                }
+              ]
+            },
+            "route_opening_height_in": {
+              "description": "Maximum robot driving height (inches) covered by the modeled HIVE opening.",
+              "oneOf": [
+                {
                   "type": "number",
                   "minimum": 0.0
                 },
@@ -162,7 +187,9 @@
             "down_opening_height_in",
             "frame_width_in",
             "frame_depth_in",
-            "bottom_height_in"
+            "bottom_height_in",
+            "route_opening_width_in",
+            "route_opening_height_in"
           ]
         },
         "loading_zone": {
@@ -2218,6 +2245,97 @@
         "relocalize"
       ]
     },
+    "chassis": {
+      "type": "object",
+      "properties": {
+        "robot_length_in": {
+          "description": "Robot length, back edge to front edge (inches). With the axle positions it places the spin centre (Pedro's pose) for the start and reset poses.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "robot_width_in": {
+          "description": "Robot width, left edge to right edge (inches). The spin centre is on the centre line, robot_width_in / 2 from each side.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "drive_height_in": {
+          "description": "Maximum robot height above the tiles (inches) in the configuration used for path following, including any moving mechanisms.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "back_axle_from_back_in": {
+          "description": "Back wheel centre's distance from the robot's back edge (inches). The spin centre is midway between the axles.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "front_axle_from_back_in": {
+          "description": "Front wheel centre's distance from the robot's back edge (inches). The spin centre is midway between the axles.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "wheel_track_in": {
+          "description": "Left wheel centre to right wheel centre (inches), wheels centred side to side. With the axle positions it places the four wheel contacts PARK is judged by.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        }
+      },
+      "required": [
+        "robot_length_in",
+        "robot_width_in",
+        "drive_height_in",
+        "back_axle_from_back_in",
+        "front_axle_from_back_in",
+        "wheel_track_in"
+      ]
+    },
     "sentinel": {
       "type": "object",
       "properties": {
@@ -2233,6 +2351,10 @@
               "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
             }
           ]
+        },
+        "footprint_safety_enabled": {
+          "description": "True: the footprint gates refuse motion (the driver's turn near the HIVE, a shot's turn in place, TeleOp pose holds that would cross the HIVE or a wall) and AutoRouteSafetyTest checks every AUTO route. False: none of these refuse anything and the route checks are skipped; the park route still plans around the HIVE.",
+          "type": "boolean"
         },
         "rotation_lookahead_time": {
           "description": "Time horizon (seconds) used to project future rotation based on live angular velocity (|omega| * time). Seeded at 0.075s (derived from 0.45rad / assumed 6.0rad/s max omega); calibrate on robot using Friction Calibration TeleOp.",
@@ -2257,6 +2379,37 @@
             {
               "type": "number",
               "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "allow_under_hive_routes": {
+          "description": "Allow generated paths through the HIVE opening when the robot's driving height and swept footprint fit.",
+          "type": "boolean"
+        },
+        "route_wall_clearance_in": {
+          "description": "Minimum planned clearance (inches) between the chassis and the perimeter walls. A path may depart from a wall-touching start.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "route_start_tolerance_in": {
+          "description": "Inches. A measured route start (Sentinel.routeAround, parkRoute) whose chassis reads up to this far past a perimeter wall is moved straight in to the wall and planned from there: a robot pushed against a wall reads slightly past it (Pinpoint float rounding, heading noise). Farther out, no route is planned.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 3.0
             },
             {
               "type": "string",
@@ -2303,6 +2456,19 @@
             }
           ]
         },
+        "park_wheel_margin_in": {
+          "description": "Inches. Every configured park pose has exactly one wheel contact at least this far inside the LOADING ZONE and the other three at least this far outside it (AutoRouteSafetyTest). Half a wheel width plus end-of-path error.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
         "route_sample_step": {
           "description": "Parameter increment for autonomous and assisted-drive path safety sampling. Smaller values check more positions.",
           "oneOf": [
@@ -2310,6 +2476,20 @@
               "type": "number",
               "minimum": 0.001,
               "maximum": 0.02
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "route_corner_radius_in": {
+          "description": "Inches. A driven go-around (Sentinel.routeAround, via PathUtil.followAround) rounds each corner into a quadratic Bezier curve starting and ending this far either side of the corner (at most 45% of either leg), so the robot does not stop at corners. Each curve is re-checked against the HIVE frame and the walls; a corner whose curve is not clear stays sharp.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 36.0
             },
             {
               "type": "string",
@@ -2360,13 +2540,19 @@
       },
       "required": [
         "robot_width",
+        "footprint_safety_enabled",
         "rotation_lookahead_time",
         "protect_full_hive_footprint",
         "frame_base_width_in",
+        "allow_under_hive_routes",
+        "route_wall_clearance_in",
+        "route_start_tolerance_in",
         "center_line_margin_in",
         "wall_contact_tolerance_in",
         "park_lane_margin_in",
+        "park_wheel_margin_in",
         "route_sample_step",
+        "route_corner_radius_in",
         "park_turn_rate_dps",
         "park_settle_per_waypoint_sec",
         "geometry_epsilon_in"
@@ -4565,8 +4751,12 @@
     "auto": {
       "type": "object",
       "properties": {
+        "shot_window_enabled": {
+          "description": "Whether an autonomous volley also ends when its shot_time_points window expires. false: it ends only when the flywheel dip detector has counted auto.balls_per_volley_count balls (or the robot is known empty), and the park guard still ends the routine at its park deadline.",
+          "type": "boolean"
+        },
         "shot_time_points": {
-          "description": "Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase; interpolated and clamped at the ends. A volley ends when auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is the fallback when this table is empty.",
+          "description": "Measured autonomous shoot windows as flat distance_in, shoot_window_ms pairs, written by the Shot Timing Tuner OpMode in exactly this format. Distances must strictly increase; interpolated and clamped at the ends. With auto.shot_window_enabled, a volley ends when auto.balls_per_volley_count balls are counted OR this window expires; the window is the jam safety net. auto.shoot_wait_ms is the fallback when this table is empty.",
           "type": "array",
           "items": {"type": "number"}
         },
@@ -4662,6 +4852,24 @@
             }
           ]
         },
+        "down_wait_sec": {
+          "description": "Down AUTO: seconds to sit at the start after START before driving. The park deadline still cuts a long wait short, so the robot always reaches its end pose.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 30.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "down_park": {
+          "description": "Down AUTO: true parks with one wheel in the LOADING ZONE (auto_poses.down.*.park, LEAVE + PARK); false only drives forward off the wall (auto_poses.down.*.leave, LEAVE only).",
+          "type": "boolean"
+        },
         "intake_power": {
           "description": "Target power (0.0 to 1.0) for the single intake motor while collecting in TeleOp or autonomous.",
           "oneOf": [
@@ -4690,6 +4898,7 @@
         }
       },
       "required": [
+        "shot_window_enabled",
         "shot_time_points",
         "shoot_wait_ms",
         "balls_per_volley_count",
@@ -4698,6 +4907,8 @@
         "park_margin_ms",
         "park_reserve_ms",
         "park_update_ms",
+        "down_wait_sec",
+        "down_park",
         "intake_power",
         "cell_a_collect_flower",
         "cell_a_second_volley",
@@ -4712,7 +4923,7 @@
           "type": "string"
         },
         "transfer_power": {
-          "description": "Transfer servo power while the shooter target is positive, including spin-up. Independent of intake collection, feed gates, eject, and inventory cap; zero when shooter is stopped or transfer is manually stopped.",
+          "description": "Transfer servo power during shot feeding or a manual rev. During a shot, transfer follows the resolved feed target, including explicit manual feed.",
           "oneOf": [
             {
               "type": "number",
@@ -4855,7 +5066,7 @@
           "type": "boolean"
         },
         "field_centric_offset_deg": {
-          "description": "Field heading (degrees) that a fully-forward driver stick should drive toward when field_centric is true. 90 means stick-forward drives along field +Y, i.e. away from the driver wall at y=0. Set this to whatever direction is 'away' from where the drivers physically stand.",
+          "description": "Extra rotation (degrees, counter-clockwise) of the field-centric stick frame. 0: stick-forward drives straight away from the drivers' own alliance wall (+x for RED, -x for BLUE, applied by alliance in Casablanca).",
           "oneOf": [
             {
               "type": "number",
@@ -4910,9 +5121,64 @@
             }
           ]
         },
+        "shot_distance_in": {
+          "description": "Horizontal distance (inches) from the turret axis to the upward CELL opening that TeleOp aim-and-shoot drives to (straight toward or away from the CELL) before feeding. Keep it inside shooter.ballistics min/max_valid_distance.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 12.0,
+              "maximum": 72.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "shot_position_tolerance_in": {
+          "description": "Inches. Aim-and-shoot only drives when the robot is more than this far off shot_distance_in, and feeds only once the robot is within this of the spot it drove to.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.25,
+              "maximum": 6.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
         "flower_hold_enabled": {
-          "description": "TeleOp: driver dpad left drives to and holds the FLOWER pickup pose. False when the robot cannot take POLLEN from a FLOWER; the button then does nothing.",
+          "description": "TeleOp: the driver D-pad drives around the HIVE to the FLOWER in that direction (as the driver sees the field) and holds its pickup pose, a quarter turn of poses.<alliance>.flower about the field centre. False: the D-pad does nothing.",
           "type": "boolean"
+        },
+        "flower_flap_lead_in": {
+          "description": "Inches short of the FLOWER pickup pose (backed off along its heading) where the driver D-pad FLOWER trip stops to lower the flower flap before driving the rest of the way in.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 12.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
+        },
+        "flower_flap_settle_ms": {
+          "description": "Milliseconds the D-pad FLOWER trip waits after lowering the flower flap before driving the last flower_flap_lead_in inches. The Axon sweeps about 280 degrees from UP to DOWN.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0.0
+            },
+            {
+              "type": "string",
+              "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"
+            }
+          ]
         },
         "rumble_ms": {
           "description": "Gamepad rumble length (milliseconds) for match-time cues.",
@@ -4973,14 +5239,14 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5006,6 +5272,13 @@
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
                   ]
+                },
+                "reset": {
+                  "description": "TeleOp odometry reset pose (driver BACK, also during INIT): the robot pushed into the corner of the audience wall and the RED alliance wall, back on the audience wall, left side on the RED wall, facing the rear wall. BLUE uses the same corner (k).",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
                 }
               },
               "required": [
@@ -5013,21 +5286,22 @@
                 "park",
                 "shoot_a",
                 "shoot_b",
-                "flower"
+                "flower",
+                "reset"
               ]
             },
             "blue": {
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5053,6 +5327,13 @@
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
                   ]
+                },
+                "reset": {
+                  "description": "TeleOp odometry reset pose (driver BACK, also during INIT): the robot pushed into the corner of the audience wall and the RED alliance wall, back on the audience wall, left side on the RED wall, facing the rear wall. BLUE uses the same corner (k).",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
                 }
               },
               "required": [
@@ -5060,7 +5341,8 @@
                 "park",
                 "shoot_a",
                 "shoot_b",
-                "flower"
+                "flower",
+                "reset"
               ]
             }
           },
@@ -5077,7 +5359,11 @@
         "intake_power",
         "manual_rev_power",
         "eject_power",
+        "shot_distance_in",
+        "shot_position_tolerance_in",
         "flower_hold_enabled",
+        "flower_flap_lead_in",
+        "flower_flap_settle_ms",
         "rumble_ms",
         "park_alert_margin_ms",
         "park_alert_update_ms",
@@ -5095,7 +5381,7 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5130,7 +5416,7 @@
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5150,7 +5436,7 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5185,7 +5471,7 @@
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5214,7 +5500,7 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5256,7 +5542,7 @@
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5277,7 +5563,7 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5319,7 +5605,7 @@
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5349,14 +5635,14 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5372,14 +5658,14 @@
               "type": "object",
               "properties": {
                 "start": {
-                  "description": "Starting pose: touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
                   ]
                 },
                 "park": {
-                  "description": "Parking pose: footprint partially inside the alliance LOADING ZONE but clear of the perimeter wall, so the robot earns both LEAVE and PARK at the end of AUTO.",
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
                   "oneOf": [
                     {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
                     {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
@@ -5396,12 +5682,124 @@
             "red",
             "blue"
           ]
+        },
+        "up": {
+          "type": "object",
+          "properties": {
+            "red": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                },
+                "park": {
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                }
+              },
+              "required": [
+                "start",
+                "park"
+              ]
+            },
+            "blue": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "description": "Starting pose of the spin centre (6.75 in from the back edge, see chassis): touching the perimeter wall, fully on the alliance's side, not in the LOADING ZONE and not touching a FLOWER (G304).",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                },
+                "park": {
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                }
+              },
+              "required": [
+                "start",
+                "park"
+              ]
+            }
+          },
+          "required": [
+            "red",
+            "blue"
+          ]
+        },
+        "down": {
+          "type": "object",
+          "properties": {
+            "red": {
+              "type": "object",
+              "properties": {
+                "park": {
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                },
+                "leave": {
+                  "description": "Down AUTO with auto.down_park false: the pose it drives to after the wait, off the wall for LEAVE and clear of the LOADING ZONE (no PARK).",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                }
+              },
+              "required": [
+                "park",
+                "leave"
+              ]
+            },
+            "blue": {
+              "type": "object",
+              "properties": {
+                "park": {
+                  "description": "Parking pose: exactly one wheel in the alliance LOADING ZONE (its contact at least sentinel.park_wheel_margin_in inside the tape, the other three at least that far outside) and the chassis clear of the perimeter wall, so the robot earns both LEAVE and PARK and leaves the rest of the zone to the partner.",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                },
+                "leave": {
+                  "description": "Down AUTO with auto.down_park false: the pose it drives to after the wait, off the wall for LEAVE and clear of the LOADING ZONE (no PARK).",
+                  "oneOf": [
+                    {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+                    {"type": "string", "pattern": "^(?i)(m|k|mirror|key)?\\s*[+\\-*/]?\\s*\\d*(\\.\\d+)?$"}
+                  ]
+                }
+              },
+              "required": [
+                "park",
+                "leave"
+              ]
+            }
+          },
+          "required": [
+            "red",
+            "blue"
+          ]
         }
       },
       "required": [
         "cell_a",
         "cell_b",
-        "park_only"
+        "park_only",
+        "up",
+        "down"
       ]
     },
     "agent_bridge": {
@@ -5598,6 +5996,7 @@
     "turret_servo_test",
     "turret",
     "vision",
+    "chassis",
     "sentinel",
     "casablanca",
     "shooter",

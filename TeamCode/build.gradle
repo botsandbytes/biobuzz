@@ -270,6 +270,7 @@ tasks.register('checkPushConfig', Test) {
         includeTestsMatching 'org.firstinspires.ftc.teamcode.AutoRouteSafetyTest'
         includeTestsMatching 'org.firstinspires.ftc.teamcode.ConfigSanityTest'
         includeTestsMatching 'org.firstinspires.ftc.teamcode.MatchClockTest'
+        includeTestsMatching 'org.firstinspires.ftc.teamcode.StartPoseGeometryTest'
     }
     inputs.file("${rootProject.projectDir}/TeamCode/src/main/java/org/firstinspires/ftc/teamcode/robot/config/config.yaml")
     // These tests only read config, in a fresh JVM: skip FreshConfigExtension's two reloads per test.

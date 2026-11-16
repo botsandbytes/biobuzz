@@ -132,6 +132,13 @@ public final class ConfigSanity {
               "shooter.ballistics: min_valid_distance %.0f >= max_valid_distance %.0f: every shot is out of range",
               b.min_valid_distance, b.max_valid_distance));
     }
+    double shotDistance = config.teleop.shot_distance_in;
+    if (shotDistance < b.min_valid_distance || shotDistance > b.max_valid_distance) {
+      p.add(
+          fmt(
+              "teleop.shot_distance_in %.1f is outside shooter.ballistics valid distances [%.0f, %.0f]: aim-and-shoot drives to a spot the shot table does not cover",
+              shotDistance, b.min_valid_distance, b.max_valid_distance));
+    }
     try {
       BallisticsParameters.fromConfig();
     } catch (RuntimeException e) {

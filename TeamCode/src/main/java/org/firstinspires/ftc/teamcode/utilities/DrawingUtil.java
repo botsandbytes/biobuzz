@@ -91,6 +91,23 @@ public class DrawingUtil {
     }
   }
 
+  /**
+   * Draws a planned route (blue) from {@code from} through {@code waypoints}; call before update.
+   */
+  public static void drawRoute(
+      FieldManager field,
+      com.pedropathing.math.Pose from,
+      java.util.List<com.pedropathing.math.Pose> waypoints) {
+    if (field == null || waypoints.isEmpty()) return;
+    field.setStyle("stroke", "blue", 1.5);
+    com.pedropathing.math.Pose previous = from;
+    for (com.pedropathing.math.Pose p : waypoints) {
+      field.moveCursor(previous.x(), previous.y());
+      field.line(p.x(), p.y());
+      previous = p;
+    }
+  }
+
   private static void drawRect(FieldManager field, double x1, double y1, double x2, double y2) {
     field.moveCursor(x1, y1);
     field.line(x2, y1);

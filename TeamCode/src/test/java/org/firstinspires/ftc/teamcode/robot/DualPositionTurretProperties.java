@@ -37,6 +37,7 @@ import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 class DualPositionTurretProperties {
   private static final Pose POSE = new Pose(0, 0, 0);
 
+  private final boolean savedEnabled = config.turret.enabled;
   private final boolean savedDual = config.turret.dual_position.enabled;
   private final boolean savedCalibrated = config.turret.dual_position.angle_calibrated;
   private final boolean savedPair = config.turret_servo_test.pair_verified;
@@ -46,6 +47,7 @@ class DualPositionTurretProperties {
 
   @AfterProperty
   void restore() {
+    config.turret.enabled = savedEnabled;
     config.turret.dual_position.enabled = savedDual;
     config.turret.dual_position.angle_calibrated = savedCalibrated;
     config.turret_servo_test.pair_verified = savedPair;
@@ -67,6 +69,7 @@ class DualPositionTurretProperties {
     final Turret turret;
 
     Rig() {
+      config.turret.enabled = true; // The shipped robot runs without the turret.
       config.turret.dual_position.enabled = true;
       var s = config.turret_servo_test;
       HardwareMap hw = mock(HardwareMap.class);

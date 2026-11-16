@@ -5,6 +5,8 @@ import com.bylazar.field.FieldManager;
 import com.bylazar.field.PanelsField;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
+import com.pedropathing.ivy.CommandBuilder;
+import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -15,6 +17,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.auto.PathUtil;
 import org.firstinspires.ftc.teamcode.records.Alliance;
 import org.firstinspires.ftc.teamcode.records.BallType;
 import org.firstinspires.ftc.teamcode.records.HiveCell;
@@ -38,10 +41,16 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
   public record CalibrationPoint(
       double distanceInches, double hoodServoPos, double rpm, String verdict, long timestampMs) {}
 
-  /** Hood step per D-Pad press: up/down is coarse, left/right is fine. */
-  private static final double HOOD_STEP_COARSE = 0.050;
+  /** Flywheel step (ticks/s) per D-Pad press: up/down is coarse, right/left is fine. */
+  private static final double RPM_STEP_COARSE = 50.0;
 
-  private static final double HOOD_STEP_FINE = 0.005;
+  private static final double RPM_STEP_FINE = 10.0;
+
+  /**
+   * This robot has no hood servo, so the flywheel speed is the only thing tuned. The shot table
+   * keeps its hood column for the format, and every row written here carries this in it.
+   */
+  private static final double NO_HOOD = 0.0;
 
   private List<LynxModule> allHubs;
   private Robot robot;
@@ -53,11 +62,14 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
   private boolean shotHeld = false;
 
   /**
-   * Calibration distances (inches, robot centre to the RED CELL A opening centre). The ray is
-   * {@link #RAY_OFF_AXIS_DEG} off the opening's outward direction so it reaches ~52 in before the
-   * audience wall; longer endpoints are skipped automatically.
+   * Calibration distances (inches, turret axis to the RED CELL A opening centre). This robot shoots
+   * from close in (shoot_a and the AUTO volley poses are 28-34 in), so the grid runs from about the
+   * closest the robot gets without touching the HIVE frame to a little past the farthest volley,
+   * matching shooter.ballistics min/max_valid_distance. Endpoints the drive or footprint cannot
+   * reach safely along the ray are skipped automatically.
    */
-  private static final double[] CALIBRATION_DISTANCES = new double[] {24.0, 30.0, 36.0, 42.0, 48.0};
+  private static final double[] CALIBRATION_DISTANCES =
+      new double[] {20.0, 24.0, 28.0, 32.0, 36.0, 40.0};
 
   /** Ray angle off the CELL opening's outward direction, toward the RED alliance wall. */
   private static final double RAY_OFF_AXIS_DEG = -40.0;
@@ -66,6 +78,11 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
   private CalibrationRay ray;
 
   private final List<Double> skippedDistances = new ArrayList<>();
+
+  /** The last route driven to an endpoint, for the field drawing. */
+  private List<Pose> plannedRoute = List.of();
+
+  private Pose routeStart = new Pose(0, 0, 0);
 
   @Override
   public void runOpMode() throws InterruptedException {
@@ -87,7 +104,10 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
     MatchProfile profile =
         org.firstinspires.ftc.teamcode.robot.config.generated.config.loadMatchProfile(Alliance.RED);
     robot = new Robot(hardwareMap, telemetry, profile);
-    robot.follower.setPose(profile.shootAPose());
+    // Start in the TeleOp reset corner (back on the audience wall, left side on the RED wall): a
+    // spot
+    // the drivers can place the robot in exactly. Each endpoint is then reached around the HIVE.
+    robot.follower.setPose(profile.resetPose());
     ray = CalibrationRay.forCell(robot.field, HiveCell.A, RAY_OFF_AXIS_DEG);
 
     boolean bumperPrev = false;
@@ -99,7 +119,9 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
       bumperPrev = bumper;
 
       telemetry.addLine("Ballistics Human-in-the-Loop Calibration (RED CELL A)");
-      telemetry.addLine("Place the robot at teleop.poses.red.shoot_a; RED's audience CELL UP.");
+      telemetry.addLine(
+          "Place the robot in the reset corner (teleop.poses.red.reset): back on the audience wall,"
+              + " left side on the RED wall. RED's audience CELL UP.");
       telemetry.addData("Target CELL opening", "(%.1f, %.1f)", ray.targetX(), ray.targetY());
       telemetry.addData(
           "Ball type (right bumper)",
@@ -112,7 +134,7 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
       telemetry.addLine("  1. Confirmation Prompt prints Coords (X, Y, Heading)");
       telemetry.addLine("  2. Press A to CONFIRM move | Press B to SKIP");
       telemetry.addLine("  3. Autonomous move or manual drive to waypoint");
-      telemetry.addLine("  4. D-Pad UP (LONG) / DOWN (SHORT) / A (ACCEPT)");
+      telemetry.addLine("  4. D-Pad up/down +/-50, right/left +/-10 flywheel; A ACCEPT");
       telemetry.update();
       sleep(20);
     }
@@ -149,17 +171,11 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
         Pose targetPose = Turret.robotPoseForPivot(ray.waypoint(distance));
         double targetHeadingDeg = Math.toDegrees(targetPose.heading());
 
-        // The follower drives straight there on its own: refuse an endpoint whose drive or final
-        // footprint would touch the HIVE frame or a wall (a measured pivot offset can move it).
-        java.util.Optional<String> unsafe = driveProblem(robot.follower.pose(), targetPose);
-        if (unsafe.isPresent()) {
-          skippedDistances.add(distance);
-          telemetry.clearAll();
-          telemetry.addLine("SKIPPING UNSAFE ENDPOINT");
-          telemetry.addData("Requested distance", "%.1f in", distance);
-          telemetry.addData("Drive there", unsafe.get());
-          telemetry.update();
-          sleep(1500);
+        // The follower drives there on its own, around the HIVE (Sentinel.routeAround): refuse an
+        // endpoint with no route whose legs keep the footprint clear of the HIVE frame and the
+        // walls, or whose own footprint touches them (a measured pivot offset can move it).
+        if (robot.sentinel.routeAround(robot.follower.pose(), targetPose, true).isEmpty()) {
+          skipUnreachable(distance);
           continue;
         }
 
@@ -169,10 +185,13 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
           continue;
         }
 
-        // --- STEP 2: AUTONOMOUS MOVEMENT TO WAYPOINT ---
-        moveToWaypoint(targetPose);
+        // --- STEP 2: AUTONOMOUS MOVEMENT TO WAYPOINT, AROUND THE HIVE ---
+        if (!moveToWaypoint(targetPose)) {
+          skipUnreachable(distance);
+          continue;
+        }
 
-        // --- STEP 3: HUMAN-IN-THE-LOOP HOOD TUNING ---
+        // --- STEP 3: HUMAN-IN-THE-LOOP FLYWHEEL TUNING (no hood) ---
         calibrateEndpoint(distance);
       }
 
@@ -290,42 +309,47 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
     return confirmed;
   }
 
-  /** Why driving straight from {@code from} to {@code to} is unsafe, or empty if it is clear. */
-  private java.util.Optional<String> driveProblem(Pose from, Pose to) {
-    List<Pose> samples = new ArrayList<>();
-    int steps = Math.max(2, (int) Math.ceil(from.distance(to)));
-    double turn = AngleUnit.normalizeRadians(to.heading() - from.heading());
-    for (int i = 0; i <= steps; i++) {
-      double t = (double) i / steps;
-      samples.add(
-          new Pose(
-              from.x() + t * (to.x() - from.x()),
-              from.y() + t * (to.y() - from.y()),
-              from.heading() + t * turn));
-    }
-    return robot.sentinel.routeProblem(samples, false);
+  private void skipUnreachable(double distance) {
+    skippedDistances.add(distance);
+    telemetry.clearAll();
+    telemetry.addLine("SKIPPING UNREACHABLE ENDPOINT");
+    telemetry.addData("Requested distance", "%.1f in", distance);
+    telemetry.addLine("No route around the HIVE keeps the footprint clear of it and the walls.");
+    telemetry.update();
+    sleep(1500);
   }
 
-  private void moveToWaypoint(Pose targetPose) {
-    robot.follower.hold(targetPose);
-
-    telemetry.clearAll();
-    telemetry.addData(
-        "Moving to Target Pose",
-        "(%.1f, %.1f, %.1f°)",
-        targetPose.x(),
-        targetPose.y(),
-        Math.toDegrees(targetPose.heading()));
-    telemetry.update();
+  /**
+   * Drives to {@code targetPose} around the HIVE ({@code Sentinel.routeAround}, followed leg by
+   * leg) and holds it. False, without moving, if no route checks clear from where the robot is now.
+   */
+  private boolean moveToWaypoint(Pose targetPose) {
+    Pose start = robot.follower.pose();
+    List<Pose> route = robot.sentinel.routeAround(start, targetPose, true);
+    if (route.isEmpty()) {
+      return false;
+    }
+    routeStart = start;
+    plannedRoute = route;
+    CommandBuilder drive =
+        PathUtil.followAround(robot.follower, robot.sentinel, start, route, true);
+    drive.schedule();
+    boolean holding = false;
 
     long startTime = System.currentTimeMillis();
-    long timeoutMs = 8000;
+    // Long enough to come from the reset corner around the HIVE.
+    long timeoutMs = 20000;
 
     while (opModeIsActive() && (System.currentTimeMillis() - startTime) < timeoutMs) {
       for (LynxModule module : allHubs) {
         module.clearBulkCache();
       }
       robot.update();
+      if (!holding && !Scheduler.isScheduled(drive)) {
+        // The last leg ends on its path; hold the endpoint itself.
+        robot.follower.hold(targetPose);
+        holding = true;
+      }
       drawVisuals();
 
       Pose currentPose = robot.follower.pose();
@@ -346,6 +370,8 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
           targetPose.y(),
           Math.toDegrees(targetPose.heading()));
       telemetry.addData(
+          "Route", "%d leg(s) around the HIVE%s", route.size(), holding ? ", holding" : "");
+      telemetry.addData(
           "Current Robot Pose",
           "(%.1f, %.1f, %.1f°)",
           currentPose.x(),
@@ -356,61 +382,57 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
       telemetry.addData("Actual Distance to CELL", "%.2f in", actualDist);
       telemetry.update();
 
-      if ((distError < 0.8 && angleErrorDeg < 1.5)
-          || (robot.follower.velocity().toVector2D().magnitude() < 0.2 && distError < 2.0)) {
+      if (holding
+          && ((distError < 0.8 && angleErrorDeg < 1.5)
+              || (robot.follower.velocity().toVector2D().magnitude() < 0.2 && distError < 2.0))) {
         break;
       }
     }
+    if (!holding) {
+      // Timed out mid-route: stop the legs and hold where it is; the driver can drive from here.
+      drive.cancel();
+      robot.follower.hold(robot.follower.pose());
+    }
+    return true;
   }
 
   private void calibrateEndpoint(double targetDistanceInches) {
     var b = org.firstinspires.ftc.teamcode.robot.config.generated.config.shooter.ballistics;
-    // Ordered travel bounds. min_hood_servo_pos names the servo position at the minimum *angle*,
-    // and the linkage is reversed (servo 0.0 is the steepest arc), so it is numerically the larger
-    // of the two and cannot be used directly as the low end of the search window.
-    double minServo = Math.min(b.min_hood_servo_pos, b.max_hood_servo_pos);
-    double maxServo = Math.max(b.min_hood_servo_pos, b.max_hood_servo_pos);
+    // The whole range the Shooter can command, NOT the solver's [preferred_shot_rpm, max_shot_rpm]
+    // policy band: this exists to test outside that band, and close shots may want less.
+    double maxManualRpm =
+        org.firstinspires.ftc.teamcode.robot.config.generated.config.shooter.max_rpm;
 
-    // Seed from the existing measured shot table, interpolated at this distance. That makes each
-    // run start from the last run's answer and refine it, instead of restarting from a model
-    // guess every time. When the table is missing or unreadable, fall back to the middle of the
-    // hood's travel and the preferred flywheel speed — a known-neutral starting point rather than
-    // a value derived from parameters this robot has no way to measure.
-    double testPos;
+    // Seed from the existing shot table, interpolated at this distance, so each run starts from the
+    // last run's answer and refines it. Without a usable table, start at preferred_shot_rpm.
     double pinnedRpm;
     String seedSource;
     try {
       org.firstinspires.ftc.teamcode.ballistics.ShotTable.Shot seed =
           org.firstinspires.ftc.teamcode.ballistics.ShotTable.fromConfig(ballType)
               .lookup(targetDistanceInches);
-      testPos = seed.hoodServoPosition();
       pinnedRpm = seed.rpm();
       seedSource =
           seed.withinCalibratedRange() ? "shot table" : "shot table (clamped, out of range)";
     } catch (RuntimeException e) {
-      testPos = (minServo + maxServo) / 2.0;
       pinnedRpm = b.preferred_shot_rpm;
       seedSource = "defaults (no usable shot table)";
     }
-    testPos = Math.clamp(testPos, minServo, maxServo);
-    double pinnedPower =
-        pinnedRpm / org.firstinspires.ftc.teamcode.robot.config.generated.config.shooter.max_rpm;
+    pinnedRpm = Math.clamp(pinnedRpm, 0.0, maxManualRpm);
+    double pinnedPower = pinnedRpm / maxManualRpm;
 
     double solverInitialRpm = pinnedRpm;
-    double seedPos = testPos;
-    boolean dpadLeftPrev = false;
-    boolean dpadRightPrev = false;
-    boolean leftStickPrev = false;
-    boolean rightStickPrev = false;
     boolean yPressed = false;
 
     // All seeded true so a button carried in from the confirmation prompt must be released before
     // it counts. Previously these were level reads behind a sleep(400), so holding A through the
-    // drive to the waypoint accepted this endpoint's hood angle the instant the loop opened.
+    // drive to the waypoint accepted this endpoint the instant the loop opened.
     boolean aPrev = true;
     boolean bPrev = true;
     boolean dpadUpPrev = true;
     boolean dpadDownPrev = true;
+    boolean dpadLeftPrev = true;
+    boolean dpadRightPrev = true;
 
     // moveToWaypoint() left the follower in holdPoint mode, which ignores setTeleOpDrive() until
     // manualDrive is switched on. Without this, the sticks below have no effect on the robot.
@@ -421,89 +443,38 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
         module.clearBulkCache();
       }
 
-      // Direct hood control: D-Pad up/down steps coarse, left/right steps fine. No bisection and
-      // no search window — the driver walks the hood to where the shot scores and accepts it. The
-      // old LONG/SHORT bisection assumed which way to move for a given miss, which is only valid
-      // on one branch of the trajectory family and drove the hood the wrong way at close range.
+      // The flywheel speed is the only knob: D-Pad up/down steps it coarse, right/left fine, and Y
+      // returns it to the seed. No bisection: the driver walks the speed to where the shot scores
+      // and accepts it. A step reaches the shooter at once whenever the flywheel is spinning, by
+      // the X toggle (flywheelRevOn) or a held trigger, which leaves shotController "active" even
+      // after release, since nothing here calls stopShot() on its own; gating on flywheelRevOn
+      // alone once left the on-screen number changed and the real target where it was.
+      double step = 0.0;
       if (gamepad1.dpad_up && !dpadUpPrev) {
-        testPos = Math.min(maxServo, testPos + HOOD_STEP_COARSE);
+        step += RPM_STEP_COARSE;
+      }
+      if (gamepad1.dpad_down && !dpadDownPrev) {
+        step -= RPM_STEP_COARSE;
+      }
+      if (gamepad1.dpad_right && !dpadRightPrev) {
+        step += RPM_STEP_FINE;
+      }
+      if (gamepad1.dpad_left && !dpadLeftPrev) {
+        step -= RPM_STEP_FINE;
       }
       dpadUpPrev = gamepad1.dpad_up;
-
-      if (gamepad1.dpad_down && !dpadDownPrev) {
-        testPos = Math.max(minServo, testPos - HOOD_STEP_COARSE);
-      }
       dpadDownPrev = gamepad1.dpad_down;
-
-      if (gamepad1.dpad_right && !dpadRightPrev) {
-        testPos = Math.min(maxServo, testPos + HOOD_STEP_FINE);
-      }
       dpadRightPrev = gamepad1.dpad_right;
-
-      if (gamepad1.dpad_left && !dpadLeftPrev) {
-        testPos = Math.max(minServo, testPos - HOOD_STEP_FINE);
-      }
       dpadLeftPrev = gamepad1.dpad_left;
-
-      // HITL RPM Nudge Controls: Left Stick Click (-50 RPM), Right Stick Click (+50 RPM), Button Y
-      // (Reset). Pushed to the shooter immediately whenever the flywheel is spinning by either
-      // mechanism this OpMode uses — the X-toggle (flywheelRevOn) or a held trigger, which leaves
-      // shotController "active" even after release, since nothing here calls stopShot() on its
-      // own. Gating on flywheelRevOn alone meant a nudge made while spun up via the trigger updated
-      // the on-screen pinnedRpm number but never actually reached the shooter, so the real
-      // commanded target stayed wherever it was — this is what "still says 1000" was.
-      //
-      // Bounded by what the Shooter can physically command, NOT by the solver's
-      // [preferred_shot_rpm, max_shot_rpm] policy band. Those bounds are a deliberate runtime
-      // choice about where the flywheel should sit; this override exists precisely to test outside
-      // them and find out whether that choice is right. Flooring the nudge at preferred_shot_rpm
-      // made it impossible to try anything slower than the value being evaluated, which is the
-      // whole question at close range. Sub-preferred points fit correctly too —
-      // fitParametersWithRpm
-      // scales each trial by its own recorded RPM.
-      double maxManualRpm =
-          org.firstinspires.ftc.teamcode.robot.config.generated.config.shooter.max_rpm;
-      boolean flywheelSpinning = flywheelRevOn || robot.shotController.isActive();
-
-      if (gamepad1.left_stick_button && !leftStickPrev) {
-        pinnedRpm = Math.max(0.0, pinnedRpm - 50.0);
-        pinnedPower =
-            pinnedRpm
-                / org.firstinspires.ftc.teamcode.robot.config.generated.config.shooter.max_rpm;
-        if (flywheelSpinning) {
-          robot.shooter.setTargetPower(pinnedPower);
-        }
-      }
-      leftStickPrev = gamepad1.left_stick_button;
-
-      if (gamepad1.right_stick_button && !rightStickPrev) {
-        pinnedRpm = Math.min(maxManualRpm, pinnedRpm + 50.0);
-        pinnedPower =
-            pinnedRpm
-                / org.firstinspires.ftc.teamcode.robot.config.generated.config.shooter.max_rpm;
-        if (flywheelSpinning) {
-          robot.shooter.setTargetPower(pinnedPower);
-        }
-      }
-      rightStickPrev = gamepad1.right_stick_button;
-
-      if (gamepad1.y && !yPressed) {
-        pinnedRpm = solverInitialRpm;
-        testPos = seedPos;
-        pinnedPower =
-            pinnedRpm
-                / org.firstinspires.ftc.teamcode.robot.config.generated.config.shooter.max_rpm;
-        if (flywheelSpinning) {
-          robot.shooter.setTargetPower(pinnedPower);
-        }
-      }
+      boolean reset = gamepad1.y && !yPressed;
       yPressed = gamepad1.y;
-
-      org.firstinspires.ftc.teamcode.records.BallisticsParameters currentParams =
-          org.firstinspires.ftc.teamcode.records.BallisticsParameters.fromConfig();
-      double currentAngleDeg =
-          org.firstinspires.ftc.teamcode.ballistics.BallisticsModel.servoPosToAngle(
-              testPos, currentParams);
+      if (step != 0.0 || reset) {
+        pinnedRpm = reset ? solverInitialRpm : Math.clamp(pinnedRpm + step, 0.0, maxManualRpm);
+        pinnedPower = pinnedRpm / maxManualRpm;
+        if (flywheelRevOn || robot.shotController.isActive()) {
+          robot.shooter.setTargetPower(pinnedPower);
+        }
+      }
 
       // TeleOp drive & armed heading lock support (runs every tick so Casablanca can rotate
       // chassis)
@@ -559,7 +530,6 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
       }
       xPressed = gamepad1.x;
 
-      robot.shooter.setTargetHoodPosition(testPos);
       robot.update();
       drawVisuals();
 
@@ -600,12 +570,8 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
               ? String.format("%.0f RPM (Solver)", pinnedRpm)
               : String.format("%.0f RPM (HITL %+.0f)", pinnedRpm, rpmDelta);
 
-      telemetry.addLine("--- Hood & RPM ---");
-      telemetry.addData("Hood Servo Pos", "%.4f", testPos);
-      telemetry.addData("Shooter target hood", "%.4f", robot.shooter.getTargetHoodPosition());
-      telemetry.addData("Servo readback", "%.4f", robot.shooter.getHoodPositionReadback());
-      telemetry.addData(
-          "Hood travel", "[%.3f, %.3f]  seed %.4f (%s)", minServo, maxServo, seedPos, seedSource);
+      telemetry.addLine("--- Flywheel (no hood) ---");
+      telemetry.addData("Seed", "%.0f ticks/s (%s)", solverInitialRpm, seedSource);
       telemetry.addData("Pinned RPM Setpoint", rpmDisplay);
       telemetry.addData(
           "Nudge Range", "0 - %.0f  (solver picked %.0f)", maxManualRpm, solverInitialRpm);
@@ -655,12 +621,11 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
       telemetry.addLine("  Left Bumper/LT  : Stop Intake & Shot");
       telemetry.addLine("  Button X        : Toggle Flywheel Rev");
       telemetry.addLine(
-          String.format("  DPad Up/Down    : Hood COARSE -/+ %.3f servo", HOOD_STEP_COARSE));
+          String.format("  DPad Up/Down    : Flywheel +/- %.0f ticks/s", RPM_STEP_COARSE));
       telemetry.addLine(
-          String.format("  DPad Left/Right : Hood FINE   -/+ %.3f servo", HOOD_STEP_FINE));
-      telemetry.addLine("  Stick Clicks L/R: Nudge RPM -/+ 50 (full 0-max range)");
-      telemetry.addLine("  Button Y        : Reset hood + RPM to seed");
-      telemetry.addLine("  Button A        : ACCEPT current hood + RPM");
+          String.format("  DPad Right/Left : Flywheel +/- %.0f ticks/s", RPM_STEP_FINE));
+      telemetry.addLine("  Button Y        : Reset flywheel to seed");
+      telemetry.addLine("  Button A        : ACCEPT this flywheel speed");
       telemetry.addLine("  Button B        : SKIP Endpoint");
       telemetry.update();
 
@@ -669,7 +634,6 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
         telemetryM.addLine("=== BALLISTICS CALIBRATION ===");
         telemetryM.addData("Distance Target (in)", String.format("%.1f", targetDistanceInches));
         telemetryM.addData("Actual Distance (in)", String.format("%.2f", actualDist));
-        telemetryM.addData("Hood Servo Pos", String.format("%.4f", testPos));
         telemetryM.addData("Pinned RPM", String.format("%.0f", pinnedRpm));
         telemetryM.addLine("--- Shooter Gate ---");
         telemetryM.addData("Flywheel Velocity (ticks/s)", String.format("%.0f", flywheelVelocity));
@@ -698,13 +662,13 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
       if (aPressed) {
         trials.add(
             new CalibrationPoint(
-                actualDist, testPos, pinnedRpm, "ACCEPTED", System.currentTimeMillis()));
+                actualDist, NO_HOOD, pinnedRpm, "ACCEPTED", System.currentTimeMillis()));
         saveProgress();
         break;
       } else if (bPressed) {
         trials.add(
             new CalibrationPoint(
-                actualDist, testPos, pinnedRpm, "SKIPPED", System.currentTimeMillis()));
+                actualDist, NO_HOOD, pinnedRpm, "SKIPPED", System.currentTimeMillis()));
         saveProgress();
         break;
       }
@@ -719,6 +683,7 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
   private void drawVisuals() {
     if (field != null) {
       DrawingUtil.drawFieldZones(field, robot.sentinel);
+      DrawingUtil.drawRoute(field, routeStart, plannedRoute);
       OpModeUtil.drawRobot(
           field, robot.follower, robot.turret, robot.field.target(HiveCell.A, robot.hive.epoch()));
     }
@@ -758,8 +723,8 @@ public class BallisticsCalibrationOpMode extends LinearOpMode {
    */
   private String buildTableYaml(List<CalibrationPoint> accepted) {
     StringBuilder sb = new StringBuilder();
-    sb.append("    # distance_in, hood_servo, flywheel ticks/s; set calibrated: true once both\n");
-    sb.append("    # SCORING ELEMENTS have real rows\n");
+    sb.append("    # distance_in, hood_servo (always 0: no hood servo), flywheel ticks/s; set\n");
+    sb.append("    # calibrated: true once both SCORING ELEMENTS have real rows\n");
     sb.append("    ").append(pointsKey()).append(": [\n");
     for (int i = 0; i < accepted.size(); i++) {
       CalibrationPoint p = accepted.get(i);

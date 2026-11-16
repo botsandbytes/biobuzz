@@ -33,8 +33,6 @@ class FlowerFlapControlsTest {
     op.driver = new Gamepad();
     op.flap = new FlowerFlap(mock(HardwareMap.class), false);
     op.intake = mock(Intake.class);
-    when(op.intake.runIntakeCommand(anyDouble())).thenReturn(Command.build());
-    when(op.intake.ejectCommand(anyDouble())).thenReturn(Command.build());
     op.shooter = mock(Shooter.class);
     op.turret = mock(Turret.class);
     op.follower = mock(Follower.class);
@@ -43,7 +41,7 @@ class FlowerFlapControlsTest {
     op.shotController = mock(ShotController.class);
     when(op.shotController.currentTarget())
         .thenReturn(new CellTarget(HiveCell.A, 50, 50, 60, 0, 0));
-    when(op.shotController.aimAndShootCommand(op.follower)).thenReturn(Command.build());
+    when(op.shotController.fixedShotCommand(anyDouble())).thenReturn(Command.build());
     op.buildCommands();
 
     op.operatorDpadLeft.update(true);
@@ -100,6 +98,11 @@ class FlowerFlapControlsTest {
       Scheduler.execute();
     }
     verify(op.shotController, never()).startShot(anyDouble(), anyBoolean());
-    verifyNoInteractions(op.shooter, op.intake);
+    verifyNoInteractions(op.shooter);
+    // TeleOp restates the intake target every loop (stop, with the toggle off); the flap buttons
+    // must never run, feed or eject it.
+    verify(op.intake, never()).run(anyDouble());
+    verify(op.intake, never()).feed(anyDouble());
+    verify(op.intake, never()).eject(anyDouble());
   }
 }

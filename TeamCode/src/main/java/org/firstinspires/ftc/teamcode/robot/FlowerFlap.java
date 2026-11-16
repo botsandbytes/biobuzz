@@ -10,7 +10,10 @@ import com.qualcomm.robotcore.util.Range;
 import java.util.Locale;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 
-/** TeleOp flower flap. Commands select targets; only Robot.update() calls the hardware writer. */
+/**
+ * Flower flap: the drivers move it in TeleOp; AUTO raises it to drive and lowers it only at a
+ * FLOWER. Commands select targets; only Robot.update() calls the hardware writer.
+ */
 public final class FlowerFlap {
   public enum Target {
     NONE,
@@ -22,10 +25,10 @@ public final class FlowerFlap {
   private Target target = Target.NONE;
   private Target lastEndpoint = Target.UP;
 
-  /** Non-TeleOp robots neither map nor write the flap hardware. */
-  public FlowerFlap(HardwareMap hardwareMap, boolean forTeleOp) {
+  /** Calibration OpModes ({@code mapped} false) neither map nor write the flap hardware. */
+  public FlowerFlap(HardwareMap hardwareMap, boolean mapped) {
     servo =
-        forTeleOp && config.flap.enabled
+        mapped && config.flap.enabled
             ? hardwareMap.get(ServoImplEx.class, config.flap.servo_name)
             : null;
     if (servo != null && configurationProblem() == null) {

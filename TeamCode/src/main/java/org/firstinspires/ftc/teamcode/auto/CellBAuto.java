@@ -64,7 +64,7 @@ public abstract class CellBAuto extends AllianceAutoBase<config.CellBAuto> {
     List<Command> steps = new ArrayList<>();
     if (hive.upCell() == HiveCell.B || robot.shotController.getBallsFired() > 0) {
       if (config.auto.cell_b_collect_flower) {
-        steps.add(collectAt(toFlower));
+        steps.add(collectAt(toFlower, poses.flower));
         steps.add(follow(follower, fromFlower));
         steps.add(volley(HiveCell.B));
       }

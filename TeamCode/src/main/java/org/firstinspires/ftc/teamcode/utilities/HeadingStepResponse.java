@@ -75,7 +75,8 @@ public final class HeadingStepResponse {
         || count < 1
         || index < 0
         || index >= count) throw new IllegalArgumentException("Invalid gain grid");
-    return count == 1 ? min : Math.fma((double) index / (count - 1), max - min, min);
+    // Not Math.fma: the Control Hub's Android runtime lacks it (NoSuchMethodError crashed the app).
+    return count == 1 ? min : min + (max - min) * index / (count - 1);
   }
 
   private static boolean positive(double x) {

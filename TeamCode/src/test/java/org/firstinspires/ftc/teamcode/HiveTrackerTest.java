@@ -62,6 +62,33 @@ public class HiveTrackerTest {
   }
 
   // -------------------------------------------------------------------------------------------
+  // Driver goal buttons (camera off)
+
+  @Test
+  public void testDeclaringTheOtherCellUpChangesStateButNotTheTipCount() {
+    hive.recordTip(); // B up, 1 TIP
+    int epoch = hive.epoch();
+    now += SETTLE + 1;
+
+    hive.declareUp(HiveCell.A);
+
+    assertEquals(HiveCell.A, hive.upCell());
+    assertEquals(1, hive.tips(), "choosing a goal is not a TIP (G426 allowance)");
+    assertTrue(hive.epoch() != epoch, "solutions for the old CELL must not fire");
+    assertEquals(HiveTracker.Source.DRIVER, hive.source());
+    assertFalse(hive.isSettled(), "a change starts the settle window like any other");
+  }
+
+  @Test
+  public void testDeclaringTheCellAlreadyUpIsANoOp() {
+    int epoch = hive.epoch();
+    hive.declareUp(HiveCell.A);
+    assertEquals(epoch, hive.epoch(), "no state change, so no new epoch");
+    assertEquals(HiveTracker.Source.MATCH_START, hive.source());
+    assertTrue(hive.isSettled());
+  }
+
+  // -------------------------------------------------------------------------------------------
   // Vision
 
   @Test

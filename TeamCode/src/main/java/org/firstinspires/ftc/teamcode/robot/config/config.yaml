@@ -26,6 +26,10 @@ field:
     frame_width_in: 49.46
     frame_depth_in: 38.95
     bottom_height_in: 30.6
+    # Conservative opening for a robot in driving configuration. At 19 in above the tiles,
+    # the official STEP's inward-leaning legs give 36.35 in between their innermost points.
+    route_opening_width_in: 34.0
+    route_opening_height_in: 18.0
   # Zone tape from the official field CAD: the RED LOADING ZONE runs from 23.91 in past the
   # field centre for 22.69 in along the RED wall, 11 in deep; the GARDEN is 22.69 x 2 in.
   loading_zone:
@@ -167,7 +171,9 @@ turret_servo_test:
   pair_verified: false
 
 turret:
-  enabled: true
+  # Off: the turret is treated as facing straight ahead (angle 0) and every shot is aimed by
+  # turning the chassis. Neither Axon is mapped, so nothing holds the turret: keep it locked forward.
+  enabled: false
   # Optional diagnostic sensor, currently unplugged. Main drivetrain "pinpoint" stays enabled.
   turn_pinpoint_enabled: false
   dual_position:
@@ -246,7 +252,9 @@ turret:
     inverted: true
 
 vision:
-  enabled: true
+  # Off: no camera. The HIVE tracker then learns which CELL is up only from the drivers (driver
+  # LT/RT pick the goal, operator LB/BACK record and undo a TIP), and relocalizing does nothing.
+  enabled: false
   # Stream continuously so the HIVE tracker sees every TIP; false streams only while relocalizing.
   continuous: true
   camera_name: "Webcam 1"
@@ -266,8 +274,31 @@ vision:
     max_range_in: 72.0
     max_correction_in: 18.0
 
+# Chassis outline, measured 2026-11-15: 18 in front to back, 17.5 in side to side, goBILDA
+# GripForce 104 mm mecanum wheels on a 13 in track (centred side to side). Pedro's pose is the spin
+# centre: the Pinpoint offsets were tuned by spinning in place, which turns a mecanum robot about
+# the middle of its wheel centres, halfway between the axles. Here that is 6.75 in from the back
+# edge and 11.25 in from the front. The start and reset poses are placed from these numbers;
+# StartPoseGeometryTest checks them against this outline (not Sentinel's square footprint).
+chassis:
+  robot_length_in: 18.0
+  robot_width_in: 17.5
+  # R102 starting envelope with mechanisms in driving position. Update if they extend upward.
+  drive_height_in: 18.0
+  back_axle_from_back_in: 2.5
+  front_axle_from_back_in: 11.0
+  # Left wheel centre to right wheel centre. With the axles it places the four wheel contacts that
+  # PARK is judged by (Sentinel.isParked).
+  wheel_track_in: 13.0
+
 sentinel:
   robot_width: 18
+  # Off: nothing is refused because of the footprint. The driver's turn is never zeroed near the
+  # HIVE, a shot turns in place to face its CELL without the sweep check, TeleOp pose holds drive
+  # straight to their target, and AutoRouteSafetyTest's footprint checks are skipped. The square
+  # footprint above is centred on the pose, but the pose is 6.75 in from the back edge (chassis),
+  # so the square is 2.25 in off at the front and back. The park route still plans around the HIVE.
+  footprint_safety_enabled: false
   rotation_lookahead_time: 0.0685
   # true: the whole HIVE frame base is a no-drive zone (the robot never passes under the HIVE).
   # false: only the two 2 in foot bars are protected, for a robot built to drive under the HIVE.
@@ -275,10 +306,24 @@ sentinel:
   # lean inward from the feet toward the pivots (official CAD) and are not modelled here.
   protect_full_hive_footprint: true
   frame_base_width_in: 2.0
+  allow_under_hive_routes: true
+  route_wall_clearance_in: 1.0
+  # A robot pushed against a wall reads slightly past it (the Pinpoint returns the reset corner
+  # 5e-7 in out; heading noise swings the corners further). A route starting up to this far past a
+  # wall is planned from the wall; farther out the pose is not trusted and nothing is planned.
+  route_start_tolerance_in: 1.0
   center_line_margin_in: 0.25
   wall_contact_tolerance_in: 0.5
   park_lane_margin_in: 3.0
+  # Every park pose puts exactly one wheel in the LOADING ZONE: that wheel's contact at least this
+  # far inside the zone tape, the other three at least this far outside, leaving the rest of the
+  # zone to the partner. Half a wheel width plus end-of-path error. AutoRouteSafetyTest checks it.
+  park_wheel_margin_in: 3.0
   route_sample_step: 0.005
+  # Driven go-arounds (Sentinel.routeAround) round each corner into a Bezier curve that starts and
+  # ends this far either side of it, so the robot does not stop there. Each curve is re-checked;
+  # a corner whose curve is not clear stays sharp.
+  route_corner_radius_in: 12.0
   # Conservative drive-time estimate for a park route: a trapezoidal profile from pedro.motion,
   # this turn rate and a settle per waypoint. Used by the TeleOp park alert and the AUTO tests.
   park_turn_rate_dps: 180.0
@@ -286,8 +331,8 @@ sentinel:
   geometry_epsilon_in: 0.000000001
 
 casablanca:
-  enable_depth_protection: true
-  enable_side_protection: true
+  enable_depth_protection: false
+  enable_side_protection: false
   repulsion:
     power: 0.12
     decel_safety_factor: 0.7
@@ -303,7 +348,7 @@ casablanca:
     y: 0.1488
     rot: 0.1041
   smoothing:
-    teleop_enabled: true
+    teleop_enabled: false
     auto_enabled: false
     # Seconds per unit power change; 0 bypasses only that signed direction.
     forward:
@@ -318,10 +363,13 @@ casablanca:
     max_loop_dt: 0.05
   heading_lock:
     enabled: true
+    # TeleOp Heading Lock Autotuner, 2026-11-14 (calibration-data/agent-runs/20261114-23*): best of
+    # the P {1,4,7,10} x D {0,.3,.6,.9} grid, then 5/5 searches passed (+/-10 deg steps, overshoot
+    # <= 2.1 deg, settled 0.65-1.11 s). The old p 5.818 / d 0 passed 0/4: it overshot 1.9-4.1 deg.
     pid:
-      p: 5.818074391107437
+      p: 4.0
       i: 0.0
-      d: 0.0
+      d: 0.6
     ks: 0.0
     intent_threshold: 0.05
     ks_moving: 0.0003
@@ -344,7 +392,8 @@ casablanca:
     trial_timeout_sec: 4.0
     stopped_speed_ips: 1.0
     sample_period_ms: 10
-    maximum_sample_gap_sec: 0.1
+    # The robot loop stalls past 100 ms now and then (144 ms seen): at 0.1 every trial aborted.
+    maximum_sample_gap_sec: 0.25
     p_min: 1.0
     p_max: 10.0
     p_count: 4
@@ -401,9 +450,12 @@ shooter:
   # clamped I; FlywheelClosedLoopProperties checks it across calibration error, battery and lag).
   # The firmware PIDF (motor_pidf) oscillated: its p was 150, ~68x REV's recipe for this F.
   use_ftc_pid: false
-  # kS, pidf.f and kick.wheel_tau_sec from Shooter Characterization on 2026-11-07 (new 6000 rpm
-  # flywheel: 11-point fit RMS 0.006 power; full power reached 2600 ticks/s at 13.5 V).
-  ks: 0.0772
+  # kS, pidf and kick.wheel_tau_sec from Shooter Characterization on 2026-11-15 on an end-of-match
+  # battery (12.8 V idle, 10.1 V under a kick): 11-point fit RMS 0.005 power, matched by an
+  # independent fit of the 100 Hz recording (calibration-data/agent-runs/*-shooter-char-lowv-1115).
+  # The first fit with the wheel turning the shooting way since Shooter's motor directions changed
+  # on 11-14; the 11-07 constants (from before) ran the feedforward ~3% hot.
+  ks: 0.0757
   nominal_voltage: 12.0
   max_voltage_compensation: 1.4
   # A full-power kick sags the bus ~1.5 V. At 0.25 s a reading taken in the sag scaled the next
@@ -411,7 +463,9 @@ shooter:
   # inside the feed band on the robot.
   voltage_refresh_sec: 0.05
   # Every *_rpm value in this section is DcMotorEx.setVelocity units (encoder ticks/second).
-  # Target power 1.0 maps here: what full power reaches at nominal_voltage ((1 - kS) / kV).
+  # Target power 1.0 maps here. Keep it at or below what full power reaches at nominal_voltage,
+  # (1 - kS) / kV: 2390 on 2026-11-15. Changing it rescales every fraction of it
+  # (teleop.manual_rev_power).
   max_rpm: 2300
   constant_rpm: 1000
   min_transfer_threshold: 0.97
@@ -438,10 +492,10 @@ shooter:
   # Higher gain tolerates less sensor lag and hides ball dips; a faster integral overshoots after
   # each ball. Chosen by sweep over kS +/-50%, kV +/-20%, 11.5-13.8 V, 0-2 loops of lag.
   pidf:
-    p: 0.000799
-    i: 0.0003995
+    p: 0.000773
+    i: 0.0003865
     d: 0
-    f: 13.09
+    f: 12.666
   # Only with use_ftc_pid: true. REV's recipe for this F: p = 0.1 F, i = 0.1 p.
   motor_pidf:
     p: 2.204
@@ -461,10 +515,12 @@ shooter:
   # predicted speed. No gain to tune: both times come from Shooter Characterization's step test.
   # wheel_tau_sec 0 disables the kick and the prediction (the loop above, unchanged).
   kick:
-    wheel_tau_sec: 0.276
+    wheel_tau_sec: 0.290
     # The step test fit 0.022 s, but with it the kick handed off a wheel already near target and
     # overshot to 1.04-1.06x; the 50 Hz recorder fits 0.040 s on the same step (the hub velocity is
     # a 50 ms count, 20 ticks/s steps). 0.045 s: no spin-up or recovery overshoot on the robot.
+    # 2026-11-15 (OpMode 0.024 s, 100 Hz recorder 0.035 s): three spin-ups 0 -> 1340 peaked at
+    # 1.045, 1.030 and 1.015 and held +-1.5% (one reading step) from 0.25-0.36 s, at 10.1-12.8 V.
     sensor_lag_sec: 0.045
     kick_lag_margin_sec: 0.0075
     kick_trigger_fraction: 0.09
@@ -481,8 +537,12 @@ shooter:
     max_hood_servo_pos: 0.0
     # Steep lobs fly ~0.6-0.8 s, so lead grows fast with speed; start conservative.
     max_moving_speed_ips: 20.0
-    min_valid_distance: 24.0
-    max_valid_distance: 72.0
+    # This robot shoots from close in: the AUTO volley poses are 28-34 in from their CELL (shoot_a,
+    # 42.8 in, is a fixed shot at teleop.manual_rev_power and does not use the table). Ballistics
+    # Calibration covers 20-40 in, the closest the robot gets without touching the HIVE frame to a
+    # little past the farthest volley pose.
+    min_valid_distance: 20.0
+    max_valid_distance: 40.0
     max_off_axis_deg: 60.0
     lead_bias_gain: 1.0
     v0_reference_rpm: 1000.0
@@ -503,27 +563,37 @@ shooter:
     # This robot cannot intake or launch NECTAR (3.6 in), so only the POLLEN table is used.
     # The NECTAR rows below stay in place for a future mechanism; set true to allow selecting them.
     nectar_enabled: false
-    # distance_in, hood_servo, flywheel ticks/s
+    # distance_in, hood_servo, flywheel ticks/s. There is no hood servo: the hood column is kept for
+    # the format and is always 0. PLACEHOLDER rows over min/max_valid_distance.
     pollen_points: [
-        24.0, 0.0000, 800.0,
+        20.0, 0.0000, 800.0,
+        24.0, 0.0000, 810.0,
+        28.0, 0.0000, 820.0,
+        32.0, 0.0000, 830.0,
         36.0, 0.0000, 840.0,
-        48.0, 0.0500, 880.0,
-        60.0, 0.1000, 925.0,
-        72.0, 0.1500, 970.0
+        40.0, 0.0000, 855.0
       ]
     nectar_points: [
-        24.0, 0.0000, 880.0,
+        20.0, 0.0000, 880.0,
+        24.0, 0.0000, 890.0,
+        28.0, 0.0000, 900.0,
+        32.0, 0.0000, 910.0,
         36.0, 0.0000, 925.0,
-        48.0, 0.0500, 970.0,
-        60.0, 0.1000, 1020.0,
-        72.0, 0.1500, 1070.0
+        40.0, 0.0000, 940.0
       ]
 
 auto:
-  # distance_in, shoot_window_ms pairs written by the Shot Timing Tuner. PLACEHOLDER.
+  # false: a volley ends only when the flywheel dip detector has counted its balls (or the robot is
+  # known empty); the park guard still ends the routine at its park deadline. true also ends it
+  # when the shot_time_points window runs out, even if a ball was not counted.
+  shot_window_enabled: false
+  # distance_in, shoot_window_ms pairs written by the Shot Timing Tuner. Measured 2026-11-15 from a
+  # flight recording of a 4-ball volley at 1380 ticks/s, 41.8 in from CELL A, on an end-of-match
+  # battery: balls hit the wheel 0.70, 1.77, 2.34 and 2.76 s after the flywheel started and it was
+  # back in band at 2.94 s. The transfer, not the distance, sets that pace, so one row (clamped)
+  # covers every distance until the Shot Timing Tuner measures more.
   shot_time_points: [
-      24.0, 2200,
-      72.0, 3000
+      41.8, 2940
     ]
   shoot_wait_ms: 2500
   balls_per_volley_count: 4
@@ -536,6 +606,10 @@ auto:
   park_margin_ms: 2500
   park_reserve_ms: 3000
   park_update_ms: 250
+  # Down AUTO: sit at the start this long after START, then park (down_park true) or only drive off
+  # the wall for LEAVE (false). The park deadline still cuts a long wait short.
+  down_wait_sec: 0.0
+  down_park: true
   intake_power: 1.0
   # This robot cannot take POLLEN from a FLOWER, so neither routine refills. CELL A still drives
   # the FLOWER-side lane around the HIVE (without stopping) to fire any POLLEN left after the TIP
@@ -546,9 +620,9 @@ auto:
 
 intake:
   transfer_servo_name: "intakeTransfer" # Continuous Rotation Servo, Control Hub servo port 5.
-  # Follows the shooter target, independently of the intake roller and its inventory cap.
+  # Tracks shot feed during a shot and the shooter target during a manual rev; off while collecting.
   transfer_power: 1.0
-  transfer_reversed: false
+  transfer_reversed: true
 
 # Axon MK2 flower flap, used only by TeleOp. No command at INIT/START until the first toggle.
 flap:
@@ -565,33 +639,63 @@ flap:
 
 teleop:
   max_speed: 1
-  field_centric: false
+  # Stick-forward drives away from the drivers' own alliance wall (+x RED, -x BLUE) whatever the
+  # robot's heading. Needs a trusted heading: the AUTO handoff pose or driver BACK at the reset corner.
+  field_centric: true
   field_centric_offset_deg: 0
   intake_power: 1.0
-  manual_rev_power: 0.6
+  # The fixed shot from poses.*.shoot_a (operator RT and X, Up AUTO preloads): 1310 ticks/s
+  # (x max_rpm 2300), the best of 1300-1380 tried from shoot_a in Shooter Spot Tuner, 2026-11-15.
+  manual_rev_power: 0.5696
   eject_power: -0.6
-  # Driver dpad left drives to and holds poses.<alliance>.flower. Off: this robot has no FLOWER
-  # pickup.
-  flower_hold_enabled: false
+  # Operator aim-and-shoot first drives straight toward or away from the upward CELL until the robot
+  # is this far from its opening (shoot_a is 42.8 in), if it is more than the tolerance off, and
+  # feeds only once it is within the tolerance of that spot. Tune with the shot's flywheel speed.
+  shot_distance_in: 28.0
+  shot_position_tolerance_in: 1.5
+  # Driver D-pad drives around the HIVE to the FLOWER that way and holds its pickup pose: one of
+  # the four quarter turns of poses.<alliance>.flower about the field centre. Off: the D-pad does
+  # nothing.
+  flower_hold_enabled: true
+  # The D-pad FLOWER trip stops this far short of the pickup pose, lowers the flower flap, waits
+  # flower_flap_settle_ms for it to come down, then drives the rest of the way in.
+  flower_flap_lead_in: 2.0
+  flower_flap_settle_ms: 500
   rumble_ms: 600
   # Park alert, from match.final_warning_remaining_ms on: once the time left is no more than the
   # estimated drive to the park pose plus this margin, rumble, speak and flash until parked.
   park_alert_margin_ms: 4000
   park_alert_update_ms: 250
   park_alert_repeat_ms: 1000
+  # Poses are the spin centre: Pinpoint offsets were tuned spinning in place, so it is midway
+  # between the axles (2.5 and 11 in from the back edge): 6.75 in from the back, 11.25 from the
+  # front, 8.75 from each side (18 x 17.5 in robot). Starts put the back edge on the wall.
   poses:
     red:
-      start: [58.0, 9.0, 90]
-      park: [16.0, 99.0, 90]
-      shoot_a: [58.0, 27.0, 90]
-      shoot_b: [58.0, 114.0, 270]
+      start: [58.0, 6.75, 90]
+      # One wheel in (sentinel.park_wheel_margin_in): the front-left wheel 3 in past the LOADING
+      # ZONE's audience-side tape (y 94.66) and 4.5 in in from its wall-side edge, the others out.
+      # The left side is 4.25 in off the RED wall (LEAVE). Driver Y, the park alert and Up AUTO.
+      park: [13.0, 93.41, 90]
+      # Shooter Spot Tuner shot best on 2026-11-15 from (59.2, 12.5) at heading 87, at
+      # manual_rev_power. Squared to 90 and moved so the aim line still crosses CELL A's opening
+      # distance (42.4 in out) at the same point, x = 61.4, 3.4 in right of the opening centre.
+      shoot_a: [61.4, 12.4, 90]
+      # shoot_a turned 180 degrees about the HIVE pivot (58.0, 70.75): CELL B seen exactly as
+      # shoot_a sees CELL A, the same distance and 3.4 in to the robot's right.
+      shoot_b: [54.6, 129.1, 270]
       flower: [16.0, 47.36, 180]
+      # Odometry reset (driver BACK): the audience-wall / RED-wall corner, back on the audience wall
+      # (spin centre 6.75 in out), left side on the RED wall (8.75 in out), facing the rear wall.
+      reset: [8.75, 6.75, 90]
     blue:
       start: m
       park: m
       shoot_a: m
       shoot_b: m
       flower: m
+      # k: the same physical corner (next to the RED HIVE) in BLUE matches too.
+      reset: k
 
 # Autonomous routines. CELL A is the alliance's CELL that starts upward-facing (RED audience
 # CELL, BLUE rear CELL); CELL B is the other CELL of the same HIVE. Blue poses are the 180-degree
@@ -599,12 +703,12 @@ teleop:
 auto_poses:
   cell_a:
     red:
-      start: [58.0, 9.0, 90]
+      start: [58.0, 6.75, 90]
       score_a: [58.0, 27.0, 90]
       flower: [16.0, 47.36, 180]
       score_b_cp: [16.0, 100.0, 0]
       score_b: [36.0, 106.0, 318.36]
-      park: [16.0, 99.0, 90]
+      park: [13.0, 93.41, 90]
     blue:
       start: m
       score_a: m
@@ -614,13 +718,14 @@ auto_poses:
       park: m
   cell_b:
     red:
-      start: [30.0, 132.5, 270]
+      start: [30.0, 134.75, 270]
       score_b_cp: [30.0, 114.0, 0]
       score_b: [58.0, 114.0, 270]
       flower: [47.36, 125.5, 90]
       alt_via: [30.0, 104.0, 0]
       alt_a: [32.0, 33.0, 40.31]
-      park: [16.0, 119.5, 270]
+      # One wheel in at the zone's rear end: front-right wheel 3 in inside the y 117.35 tape.
+      park: [13.0, 118.6, 270]
     blue:
       start: m
       score_b_cp: m
@@ -629,13 +734,41 @@ auto_poses:
       alt_via: m
       alt_a: m
       park: m
+  # Park Only: no shot. Starts in the RED-wall / rear-wall corner, opposite the reset corner and
+  # next to the LOADING ZONE: back on the rear wall, right side on the RED wall, facing the audience.
+  # Drives straight to the zone's rear end with one wheel in (front-right wheel 3 in inside y 117.35).
   park_only:
     red:
-      start: [9.0, 75.0, 0]
-      park: [16.0, 99.0, 0]
+      start: [8.75, 134.75, 270]
+      park: [13.0, 118.6, 270]
     blue:
       start: m
       park: m
+  # Up: start on CELL A's side, drive to teleop.poses.*.shoot_a, fire the preloads at
+  # teleop.manual_rev_power, then park with one wheel in the LOADING ZONE's audience end.
+  # Start: back on the audience wall, left side on the first tile seam from the RED wall
+  # (size_in / 6 = 23.58 in), so the spin centre is 23.58 + 8.75 = 32.33 in out. Check the seam on
+  # the real field: tiles are not always exactly size_in / 6.
+  up:
+    red:
+      start: [32.333, 6.75, 90]
+      park: [13.0, 93.41, 90]
+    blue:
+      start: m
+      park: m
+  # Down: starts at up.*.start flipped across the field's middle (DownAuto.flipOfUp; no separate
+  # key): RED's back on the rear wall facing the audience at (32.333, 134.75, 270), right side on the
+  # same TILE seam. Waits auto.down_wait_sec, then parks with one wheel in the LOADING ZONE's rear
+  # end (auto.down_park) or only drives forward off the wall to leave (LEAVE, no PARK). Never shoots.
+  down:
+    red:
+      # One wheel in at the zone's rear end: front-right wheel 3 in inside the y 117.35 tape.
+      park: [13.0, 118.6, 270]
+      # Straight ahead of the start, back edge 4 in off the rear wall, front 2 in short of the zone.
+      leave: [32.333, 130.75, 270]
+    blue:
+      park: m
+      leave: m
 
 # Agent bridge: HTTP endpoints under /agent/ on the Robot Controller's web server (port 8080)
 # for the laptop MCP server in tools/robot-mcp. It records hardware and OpMode telemetry, plays

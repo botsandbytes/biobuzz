@@ -60,7 +60,7 @@ class ShooterControlsTest {
     op.shotController = mock(ShotController.class);
     when(op.shotController.currentTarget())
         .thenReturn(new CellTarget(HiveCell.A, 50, 50, 60, 0, 0));
-    when(op.shotController.aimAndShootCommand(op.follower)).thenReturn(Command.build());
+    when(op.shotController.fixedShotCommand(anyDouble())).thenReturn(Command.build());
     op.buildCommands();
     clearInvocations(first, second, intakeMotor, transfer);
 

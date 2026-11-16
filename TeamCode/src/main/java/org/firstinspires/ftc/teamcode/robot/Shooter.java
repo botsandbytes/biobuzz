@@ -18,6 +18,15 @@ import org.firstinspires.ftc.teamcode.utilities.FlywheelKick;
 @Configurable
 public class Shooter {
 
+  /**
+   * Motor directions that spin the flywheel the shooting way for a positive power. OpModes that
+   * drive the motors directly (Shooter Characterization) use these too, so they measure the wheel
+   * turning the way it shoots.
+   */
+  public static final DcMotorSimple.Direction SHOOTER1_DIRECTION = DcMotorSimple.Direction.REVERSE;
+
+  public static final DcMotorSimple.Direction SHOOTER2_DIRECTION = DcMotorSimple.Direction.FORWARD;
+
   private final DcMotorEx shooter1;
   private final DcMotorEx shooter2;
 
@@ -81,11 +90,11 @@ public class Shooter {
 
     shooter1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     shooter1.setMode(initialMode);
-    shooter1.setDirection(DcMotorSimple.Direction.REVERSE);
+    shooter1.setDirection(SHOOTER1_DIRECTION);
 
     shooter2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     shooter2.setMode(initialMode);
-    shooter2.setDirection(DcMotorSimple.Direction.FORWARD);
+    shooter2.setDirection(SHOOTER2_DIRECTION);
 
     pidfController = new PIDController(config.shooter.pidf.p, 0.0, config.shooter.pidf.d);
 

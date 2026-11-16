@@ -37,12 +37,22 @@ class SentinelProperties {
   private final double size = config.field.size_in;
 
   SentinelProperties() {
-    double width = config.sentinel.robot_width;
-    config.sentinel.robot_width = width - 2 * PLANNER_SAMPLING_SLACK_IN;
+    var chassis = config.chassis;
+    double width = chassis.robot_width_in;
+    double length = chassis.robot_length_in;
+    double backAxle = chassis.back_axle_from_back_in;
+    double frontAxle = chassis.front_axle_from_back_in;
+    chassis.robot_width_in -= 2 * PLANNER_SAMPLING_SLACK_IN;
+    chassis.robot_length_in -= 2 * PLANNER_SAMPLING_SLACK_IN;
+    chassis.back_axle_from_back_in -= PLANNER_SAMPLING_SLACK_IN;
+    chassis.front_axle_from_back_in -= PLANNER_SAMPLING_SLACK_IN;
     try {
       narrowRed = new Sentinel(Alliance.RED);
     } finally {
-      config.sentinel.robot_width = width;
+      chassis.robot_width_in = width;
+      chassis.robot_length_in = length;
+      chassis.back_axle_from_back_in = backAxle;
+      chassis.front_axle_from_back_in = frontAxle;
     }
   }
 

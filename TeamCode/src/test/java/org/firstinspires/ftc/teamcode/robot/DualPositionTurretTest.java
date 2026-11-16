@@ -30,6 +30,7 @@ class DualPositionTurretTest {
   }
 
   private Turret build() {
+    config.turret.enabled = true; // The shipped robot runs without the turret.
     config.turret.dual_position.enabled = true;
     var c = config.turret_servo_test;
     when(hw.get(ServoImplEx.class, c.left_servo_name)).thenReturn(left);

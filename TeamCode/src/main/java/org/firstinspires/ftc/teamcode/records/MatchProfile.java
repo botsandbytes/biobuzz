@@ -5,8 +5,9 @@ import org.firstinspires.ftc.teamcode.config.ConfigLoader;
 
 /**
  * Everything alliance-specific a match needs, threaded explicitly into {@code Robot} (there is no
- * static "current alliance"). Poses are TeleOp hold points from {@code teleop.poses.<alliance>};
- * BLUE's are the 180-degree rotation of RED's unless overridden.
+ * static "current alliance"). Poses are from {@code teleop.poses.<alliance>}: the start, the hold
+ * points, and the corner the drivers reset odometry in. BLUE's are the 180-degree rotation of RED's
+ * unless overridden (the reset corner is {@code k}: the same corner for both alliances).
  */
 public record MatchProfile(
     Alliance alliance,
@@ -14,7 +15,8 @@ public record MatchProfile(
     Pose parkPose,
     Pose shootAPose,
     Pose shootBPose,
-    Pose flowerPose) {
+    Pose flowerPose,
+    Pose resetPose) {
 
   /** The hold pose facing {@code cell}'s opening from the side it opens toward. */
   public Pose shootPose(HiveCell cell) {
@@ -29,6 +31,7 @@ public record MatchProfile(
         ConfigLoader.load(Pose.class, prefix + "park"),
         ConfigLoader.load(Pose.class, prefix + "shoot_a"),
         ConfigLoader.load(Pose.class, prefix + "shoot_b"),
-        ConfigLoader.load(Pose.class, prefix + "flower"));
+        ConfigLoader.load(Pose.class, prefix + "flower"),
+        ConfigLoader.load(Pose.class, prefix + "reset"));
   }
 }

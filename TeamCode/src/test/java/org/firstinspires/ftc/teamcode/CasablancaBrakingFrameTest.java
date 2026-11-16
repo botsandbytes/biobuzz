@@ -17,6 +17,8 @@ public class CasablancaBrakingFrameTest {
   private boolean smoothing;
   private boolean headingLock;
   private boolean fieldCentric;
+  private boolean depthProtection;
+  private boolean sideProtection;
   private double forwardLinear;
   private double forwardQuadratic;
   private double strafeLinear;
@@ -30,6 +32,8 @@ public class CasablancaBrakingFrameTest {
     smoothing = Casablanca.enableInputSmoothing;
     headingLock = Casablanca.enableHeadingLock;
     fieldCentric = Casablanca.fieldCentric;
+    depthProtection = Casablanca.enableDepthProtection;
+    sideProtection = Casablanca.enableSideProtection;
     forwardLinear = config.pedro.braking.forward.linear;
     forwardQuadratic = config.pedro.braking.forward.quadratic;
     strafeLinear = config.pedro.braking.strafe.linear;
@@ -40,6 +44,9 @@ public class CasablancaBrakingFrameTest {
     Casablanca.enableInputSmoothing = false;
     Casablanca.enableHeadingLock = false;
     Casablanca.fieldCentric = false;
+    // These test the protection math, not whether the shipped config turns it on.
+    Casablanca.enableDepthProtection = true;
+    Casablanca.enableSideProtection = true;
   }
 
   @AfterEach
@@ -52,6 +59,8 @@ public class CasablancaBrakingFrameTest {
     Casablanca.enableInputSmoothing = smoothing;
     Casablanca.enableHeadingLock = headingLock;
     Casablanca.fieldCentric = fieldCentric;
+    Casablanca.enableDepthProtection = depthProtection;
+    Casablanca.enableSideProtection = sideProtection;
   }
 
   @Test

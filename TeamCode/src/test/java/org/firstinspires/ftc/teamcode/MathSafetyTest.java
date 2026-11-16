@@ -386,6 +386,9 @@ public class MathSafetyTest {
     Casablanca.enableInputSmoothing = false;
     Casablanca.enableFrictionComp = false;
     Casablanca.fieldCentric = false;
+    // This tests the protection math, not whether the shipped config turns it on.
+    Casablanca.enableDepthProtection = true;
+    Casablanca.enableSideProtection = true;
 
     double halfWidth = config.sentinel.robot_width / 2.0;
 
@@ -676,6 +679,34 @@ public class MathSafetyTest {
     assertEquals(0.0, outputLocked[2], 1e-4);
   }
 
+  /**
+   * TeleOp, 2026-11-14: aim-and-shoot turned the robot 78 degrees to face the CELL through a pose
+   * hold, which bypasses the lock. When the drive came back, the lock still held the old heading
+   * and swung the robot back to it. Re-latching keeps the heading the hold left it at.
+   */
+  @Test
+  public void relatchHeadingKeepsTheHeadingAPoseHoldTurnedTo() {
+    Casablanca casablanca = new Casablanca(new Sentinel(Alliance.RED));
+    Casablanca.enableHeadingLock = true;
+    Casablanca.enableFrictionComp = false;
+    Casablanca.enableInputSmoothing = false;
+    Casablanca.fieldCentric = false;
+    var still = com.pedropathing.math.Vector2D.zero();
+
+    // The driver lets go at heading 0: the lock latches 0.
+    casablanca.adjustDriveInput(new Pose(20, 20, 0), still, 0.0, 0.0, 0.0, 0.0);
+    // A pose hold then turns the robot to 78 degrees without going through the lock.
+    Pose aimed = new Pose(20, 20, Math.toRadians(78));
+    double[] stale = casablanca.adjustDriveInput(aimed, still, 0.0, 0.0, 0.0, 0.0);
+    assertTrue(stale[2] < 0, "the stale latch turns the robot back toward 0");
+
+    casablanca.relatchHeading();
+    for (int i = 0; i < 3; i++) {
+      double[] out = casablanca.adjustDriveInput(aimed, still, 0.0, 0.0, 0.0, 0.0);
+      assertEquals(0.0, out[2], 1e-9, "re-latched on the aimed heading, loop " + i);
+    }
+  }
+
   @Test
   public void testCasablancaLiveRotationLookaheadTime() {
     Sentinel sentinel = new Sentinel(Alliance.RED);
@@ -703,6 +734,9 @@ public class MathSafetyTest {
     Casablanca.enableInputSmoothing = false;
     Casablanca.enableFrictionComp = false;
     Casablanca.fieldCentric = false;
+    // This tests the protection math, not whether the shipped config turns it on.
+    Casablanca.enableDepthProtection = true;
+    Casablanca.enableSideProtection = true;
 
     // Dynamically calculate test position to be at the midpoint of the proximity braking zone
     double hardStop = Casablanca.sideHardStop;

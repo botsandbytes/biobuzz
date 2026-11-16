@@ -122,6 +122,18 @@ public final class HiveTracker {
     change(flippedUp(), HiveLaw.tipsAfterRecord(tips), Source.DRIVER);
   }
 
+  /**
+   * Driver: {@code cell} is the upward one (TeleOp's goal buttons, for when the camera is off).
+   * Keeps the TIP count, so the human player's NECTAR allowance is unchanged; a no-op when it is
+   * already the upward CELL, so pressing it again neither bumps the epoch nor restarts the settle
+   * window.
+   */
+  public void declareUp(HiveCell cell) {
+    if (cell != upCell) {
+      change(cell, tips, Source.DRIVER);
+    }
+  }
+
   /** Operator: the last TIP was a mistake. Restores the previous upward CELL. */
   public void undoTip() {
     if (HiveLaw.canUndo(tips)) {

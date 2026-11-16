@@ -266,7 +266,7 @@ svg.chart text{font:10px system-ui,sans-serif;fill:var(--mute)}
  <p class="lead">Create the Robot Configuration on the Driver Station with <b>exactly</b> these names (they are case-sensitive). This diagram is drawn from <code>teamcode/hwmap.yaml</code>. Hover a port for what it does. A wrong name makes the OpMode stop at INIT with "device not found".</p>
  <div class="grid g2" id="hubs"></div>
  <div class="tbl" style="margin-top:12px"><table><thead><tr><th style="width:160px">Name</th><th style="width:170px">Type</th><th>Purpose / notes</th></tr></thead><tbody id="hwtable"></tbody></table></div>
- <div class="call"><b>i</b><div><b>Switch, no turret:</b> set <x-k>turret.enabled</x-k> to false. <code>turn</code> and <code>turnanalog</code> become optional, and the shot gate checks chassis heading instead of turret alignment.</div></div>
+ <div class="call"><b>i</b><div><b>Switch, no turret:</b> set <x-k>turret.enabled</x-k> to false (the current setting). No turret device is mapped, the turret is treated as facing straight ahead, the robot turns in place to face the CELL for every shot, and the shot gate checks chassis heading instead of turret alignment. Nothing holds the turret, so lock it facing forward.</div></div>
 </section>
 
 <!-- ======================= DEPLOY ======================= -->
@@ -470,7 +470,7 @@ const GLOSS = [
  ["SCORING ELEMENT","Either kind of ball."],["HIVE","The pivoting scoring structure. There is one per alliance, near the field centre."],
  ["CELL A / B","A HIVE's two openings. You may only launch into the one facing up. A starts up (RED: audience side, BLUE: rear)."],
  ["TIP","Enough elements tip the HIVE (20 pts), which turns the other CELL up. Launching while it swings is not allowed."],
- ["FLOWER","Wall-mounted POLLEN dispenser. This robot has no FLOWER mechanism."],["LOADING ZONE","Taped zone on the alliance wall. Ending AUTO partly inside it, off the wall, scores PARK (and LEAVE)."],
+ ["FLOWER","Wall-mounted POLLEN dispenser. The robot takes from it with the flower flap down."],["LOADING ZONE","Taped zone on the alliance wall. Ending AUTO partly inside it, off the wall, scores PARK (and LEAVE)."],
  ["G402 / G407 / G417","Rules the code enforces: stay on your side in AUTO, at most 4 elements, upward CELL only and no ramming the HIVE."],
  ["AUTO / TELEOP","30 s autonomous, then 120 s driven."],["OpMode","A program picked on the Driver Station. Groups: Tuning, Calibration, Test."],
  ["Control Hub / DS","The robot's computer, and the phone plus gamepads that run OpModes and show telemetry."],
@@ -501,19 +501,26 @@ const STAGES = [
 const PADS = {
  driver:{n:"TeleOp · driver",g:"Gamepad 1",note:"Sticks pass through Casablanca. A pose hold checks its path against the HIVE frame and walls first. If blocked, see the \"Pose assist\" line.",m:{
   ls:["Translate","Cubic response, capped by teleop.max_speed. Deflecting past 0.2 cancels a pose hold."],rs:["Rotate","Releasing it holds the current heading."],
-  x:["Face the upward CELL","Toggles a heading lock on the bearing to the up CELL. It follows TIPS."],rt:["Hold shooting pose","Drives to and holds shoot_a or shoot_b, whichever faces the CELL that is up."],
+  x:["Face the upward CELL","Toggles a heading lock on the bearing to the up CELL. It follows TIPS."],lb:["Goal: left CELL","The camera is off: makes the CELL on your left the goal and locks the heading onto it."],rb:["Goal: right CELL","Makes the CELL on your right the goal and locks the heading onto it."],rt:["Hold shooting pose","Drives to and holds shoot_a or shoot_b, whichever faces the CELL that is up."],
   lt:["Hold park pose","Drives to and holds park. Use it when the park alert fires."],dl:["FLOWER pose (off)","Disabled while teleop.flower_hold_enabled is false."],dr:["Cancel pose hold","Back to manual driving."]}},
- operator:{n:"TeleOp · operator",g:"Gamepad 2",note:"Feeding only happens when every gate passes. The telemetry \"Shot\" line names the gate holding it.",m:{
-  a:["Start intake","Stops itself at a known count of 4 (G407)."],b:["Stop intake",""],dr:["Eject (hold)","Reverse at teleop.eject_power: a 5th element or opponent NECTAR."],
-  rt:["Aim and shoot (hold)","Holds chassis position, spins up, aims the turret, feeds when ready."],y:["Turret aim only (hold)","Tracks the upward CELL without spinning up."],
+ operator:{n:"TeleOp · operator",g:"Gamepad 2",note:"Aim and shoot feeds by itself only when every gate passes; the telemetry \"Shot\" line names the gate holding it. Toggling the intake on with A feeds by hand, gate or not.",m:{
+  a:["Intake on / off","Toggle. Collecting stops itself at a known count of 4 (G407). While the shooter runs (RT or X) it feeds the shot instead, gate or not."],b:["Intake off",""],dr:["Eject (hold)","Reverse at teleop.eject_power: a 5th element or opponent NECTAR. Turns the intake toggle off."],
+  rt:["Shoot (hold)","From the one fixed spot (driver RT drives there): flywheel at teleop.manual_rev_power, intake as soon as it is at speed. No driving, aiming or shot table."],y:["Turret aim only (hold)","Tracks the upward CELL without spinning up. Does nothing while turret.enabled is false: use driver X."],
   x:["Rev flywheel (hold)","teleop.manual_rev_power, no feed. X+Y = pre-spin and aim."],du:["Fixed-speed shot","At shooter.constant_rpm. Still gated, and blocked while uncalibrated. LT cancels."],
-  lt:["Cancel everything","Shot, aim, rev, intake, eject."],dd:["Vision relocalize (hold)","Re-anchors on the upward CELL while the HIVE is settled."],
+  lt:["Cancel everything","Shot, aim, rev, and the intake toggle."],dd:["Vision relocalize (hold)","Re-anchors on the upward CELL while the HIVE is settled."],
   lb:["Record a TIP","For a TIP the camera missed. Flips the CELL and adds a TIP."],back:["Undo a TIP",""],rb:["POLLEN / NECTAR","No effect while NECTAR is disabled."],l3:["Mark robot empty","Inventory = 0."]}},
  init:{n:"TeleOp · INIT",g:"Either gamepad",note:"Only when no AUTO ran before this TeleOp. Otherwise it inherits the AUTO's alliance.",m:{b:["Select RED",""],x:["Select BLUE",""]}},
- ballistics:{n:"Ballistics Calibration",g:"Gamepad 1",note:"RB picks POLLEN/NECTAR during INIT (NECTAR is disabled). A also confirms each endpoint before the robot drives there.",m:{
+ ballistics:{n:"Ballistics Calibration",g:"Gamepad 1",note:"Start in the reset corner; it drives to each endpoint around the HIVE. No hood servo: only the flywheel speed is tuned, at 20-40 in. RB picks POLLEN/NECTAR during INIT (NECTAR is disabled). A also confirms each endpoint before the robot drives there.",m:{
   ls:["Drive","Through Casablanca."],rs:["Turn",""],rt:["Aim + shoot","At the pinned speed."],rb:["Manual intake / feed",""],lb:["Stop intake + shot",""],lt:["Stop intake + shot",""],
-  x:["Toggle flywheel rev",""],du:["Hood coarse +0.05",""],dd:["Hood coarse −0.05",""],dr:["Hood fine +0.005",""],dl:["Hood fine −0.005",""],
-  l3:["Speed −50 ticks/s",""],r3:["Speed +50 ticks/s",""],y:["Reset hood + speed to seed",""],a:["Confirm move / ACCEPT shot",""],b:["Skip endpoint",""]}},
+  x:["Toggle flywheel rev",""],du:["Speed +50 ticks/s",""],dd:["Speed −50 ticks/s",""],dr:["Speed +10 ticks/s",""],dl:["Speed −10 ticks/s",""],
+  y:["Reset speed to seed",""],a:["Confirm move / ACCEPT shot",""],b:["Skip endpoint",""]}},
+ spot:{n:"Shooter Spot Tuner",g:"Gamepad 1",note:"Starts in the reset corner with the drive relaxed: push the robot by hand to where you want to shoot. Tune shotRpm in Panels while it shoots. The REPORT line is the spot and speed to save.",m:{
+  a:["Hold here + shoot","Flywheels at shotRpm, transfer, intake whenever the flywheel is at speed."],b:["Stop + relax the drive",""],
+  dd:["Drive to RED CELL A spot","Around the HIVE."],du:["Drive to RED CELL B spot",""],dl:["Drive to BLUE CELL A spot",""],dr:["Drive to BLUE CELL B spot",""],
+  back:["Zero odometry in the reset corner","While relaxed."]}},
+ p2p:{n:"Point To Point Drive Test",g:"Gamepad 1",note:"Starts in the reset corner (back on the audience wall, left side on the RED wall). Every trip is planned around the HIVE frame; a stop with no clear route is skipped, never driven straight.",m:{
+  x:["Tour every TeleOp pose","Both alliances: start, shoot_a, shoot_b, park, flower, then home. Waits a moment at each."],du:["Previous stop",""],dd:["Next stop",""],a:["Drive to the picked stop",""],
+  y:["Back to the reset corner",""],b:["Stop and hold","Also ends a tour."],back:["Zero odometry in the reset corner","Robot pushed into the corner."]}},
  timing:{n:"Shot Timing Tuner",g:"Gamepad 1",note:"The robot does not drive. Its pose is faked to each distance. Wait for READY before firing.",m:{
   rt:["Fire the volley",""],lt:["Stop everything",""],x:["Intake on/off","Load the balls."],a:["Accept",""],b:["Skip",""],du:["Expected balls +1",""],dd:["Expected balls −1",""],
   r3:["Dip trigger +0.5%",""],l3:["Dip trigger −0.5%",""]}},
@@ -696,7 +703,7 @@ const TROUBLE = [
  ["Deploy","adb devices is empty","Use an A-to-C cable, allow Local Network for your terminal on macOS, join the robot Wi-Fi."],
  ["Deploy","Gradle prints nothing","Frozen daemon. Use --no-daemon."],["Deploy","Max Velocity Test acts oddly after a firmware-PID run","motor_pidf persists on the hub. Power-cycle it."],
  ["Intake","Intake passes 4 balls","No entry sensor. Wire one and set inventory.entry_sensor_enabled, or the operator presses G2 B."]];
-const GAPS = ["<b>No FLOWER mechanism.</b> The flower switches are off, so each auto fires only its pre-loads.","<b>No NECTAR mechanism.</b> Every shot uses the POLLEN table.","<b>No color sensor.</b> The operator ejects opponent NECTAR (G408).",
+const GAPS = ["<b>FLOWER pickup off in AUTO.</b> The flower switches are off, so each auto fires only its pre-loads. AUTO still raises the flower flap at START (the robot cannot drive far with it down) and, with a pickup on, lowers it only within auto.flap_down_within_in of the FLOWER.","<b>No NECTAR mechanism.</b> Every shot uses the POLLEN table.","<b>No color sensor.</b> The operator ejects opponent NECTAR (G408).",
  "<b>Continuous feeding</b> while every gate passes. A TIP mid-volley stops further feeding, but balls in the air can't be recalled.","<b>Hood settling isn't measured.</b> The servo readback is the command. A clamped speed isn't re-validated against the table.",
  "<b>Moving shots</b> use first-order lead only.","<b>Hood range.</b> A launch-model estimate wants a 64-78° lob, and the hood tops out at "+get("shooter.ballistics.max_hood_angle_deg")+"°.","<b>Calibration reach.</b> Both shot calibrations stop at 48 in.",
  "<b>Proof scope.</b> The proofs cover the logic for a stated plant model. The acceptance tests check that the hardware matches.","<b>Unused hardware.</b> The gate servo in hwmap.yaml isn't driven by any code."];
@@ -726,6 +733,7 @@ function renderChecks() {
    [eq(cam, [3.54,4.72,7.68,0,50]) ? ["r","Camera mount still has the unmeasured defaults"] : ["g","Camera mount values changed from the defaults"], "vision", "vision.camera.forward_in"],
    [get("pedro.motion.max_forward_velocity") === 79.9698860197901 ? ["a","Pedro values carried over from last season (provisional)"] : ["g","Pedro values re-tuned"], "pedro", "pedro.motion.max_forward_velocity"],
    [get("turret.kv") === 0 ? ["a","Turret chassis feedforward off (kv = 0)"] : ["g","Turret feedforward on"], "turret-plant", "turret.kv"],
+   [get("turret.enabled") ? ["g","Turret aiming on"] : ["a","Turret off: the chassis turns to aim, so lock the turret facing forward"], "turret-verify", "turret.enabled"],
    [(get("turret.pivot_forward_in") === 0 && get("turret.pivot_left_in") === 0) ? ["a","Turret pivot offset not measured (0, 0)"] : ["g","Turret pivot offset set"], "measure", "turret.pivot_forward_in"],
    [(pid.i || pid.d || pid.f) ? ["a",`Turret pidf has i/d/f ≠ 0: outside the convergence proof`] : ["g","Turret gains inside the proof's form (i = d = f = 0)"], "turret-plant", "turret.pidf.i"],
    [(Math.max(ksp, ksn) / Math.max(1e-6, Math.min(ksp, ksn)) > 5) ? ["a",`Turret kS lopsided (${ksp} / ${ksn}): servo neutral off centre`] : ["g","Turret kS balanced"], "turret-plant", "turret.ks_negative"],

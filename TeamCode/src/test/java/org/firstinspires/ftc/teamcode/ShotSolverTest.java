@@ -586,7 +586,9 @@ public class ShotSolverTest {
    * With the shipped parameters and tables, every volley pose in the codebase must be shootable (in
    * front of its CELL, inside the distance gate) — and the only thing that may stop it is the
    * calibration flag. When the team sets {@code shooter.shot_table.calibrated: true} after running
-   * the calibration OpMode, this flips to requiring a fully valid shot.
+   * the calibration OpMode, this flips to requiring a fully valid shot. Fixed spots (the corner
+   * AUTO's shot, TeleOp's shoot_a and shoot_b) fire at a set power without the table and are not
+   * solved.
    */
   @Test
   public void testShippedConfigSolvesEveryVolleyPoseExceptForCalibration() {
@@ -596,6 +598,9 @@ public class ShotSolverTest {
     for (Alliance alliance : Alliance.values()) {
       FieldModel field = new FieldModel(alliance);
       for (AutoFixtures.Volley v : AutoFixtures.allVolleys(alliance)) {
+        if (v.fixed()) {
+          continue;
+        }
         CellTarget target = field.target(v.cell(), 2);
         for (BallType type : BallType.values()) {
           ShotTable shippedTable = ShotTable.fromConfig(type);

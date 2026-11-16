@@ -97,12 +97,17 @@ public abstract class TeleOpBase extends OpMode {
   protected ButtonTracker operatorLeftStick = new ButtonTracker();
   protected ButtonTracker operatorRightStick = new ButtonTracker();
 
-  protected ButtonTracker driverX = new ButtonTracker();
+  protected ButtonTracker driverA = new ButtonTracker();
   protected ButtonTracker driverB = new ButtonTracker();
+  protected ButtonTracker driverX = new ButtonTracker();
+  protected ButtonTracker driverY = new ButtonTracker();
+  protected ButtonTracker driverDpadUp = new ButtonTracker();
+  protected ButtonTracker driverDpadDown = new ButtonTracker();
   protected ButtonTracker driverDpadLeft = new ButtonTracker();
   protected ButtonTracker driverDpadRight = new ButtonTracker();
   protected ButtonTracker driverRightTrigger = new ButtonTracker();
   protected ButtonTracker driverLeftTrigger = new ButtonTracker();
+  protected ButtonTracker driverBack = new ButtonTracker();
 
   private final ButtonTracker initSelectRed = new ButtonTracker();
   private final ButtonTracker initSelectBlue = new ButtonTracker();
@@ -118,6 +123,7 @@ public abstract class TeleOpBase extends OpMode {
   private String handoffStatus = "none";
   private String poseStatus = "profile start";
   private String relocalizeStatus = "";
+  private String cornerResetStatus = "";
   private String driveAssistStatus = "idle";
 
   // Park alert state (see handleParkAlert).
@@ -179,7 +185,13 @@ public abstract class TeleOpBase extends OpMode {
     double maxSpeed = config.teleop.max_speed;
     teleOpDriveCommand =
         Command.build()
-            .setStart(() -> follower.manual(0, 0, 0))
+            .setStart(
+                () -> {
+                  follower.manual(0, 0, 0);
+                  // Every restart follows a pose hold or an aimed shot that turned the robot
+                  // without the lock. Keep the heading it was left at, not the one from before.
+                  casablanca.relatchHeading();
+                })
             .setExecute(
                 () -> {
                   double y = Math.clamp(-Math.pow(driver.left_stick_y, 3), -maxSpeed, maxSpeed);
@@ -228,6 +240,10 @@ public abstract class TeleOpBase extends OpMode {
   public void init_loop() {
     initSelectRed.update(gamepad1.b || gamepad2.b);
     initSelectBlue.update(gamepad1.x || gamepad2.x);
+    driverBack.update(gamepad1.back);
+    if (handlePoseReset()) {
+      poseStatus = "corner reset (driver BACK)";
+    }
     if (allianceUnconfirmed && (initSelectRed.onTrue() || initSelectBlue.onTrue())) {
       Alliance chosen = initSelectRed.onTrue() ? Alliance.RED : Alliance.BLUE;
       blackboard.put("ALLIANCE", chosen);
@@ -239,10 +255,15 @@ public abstract class TeleOpBase extends OpMode {
 
     telemetry.addData("Flower flap", flap.status());
     telemetry.addLine(
-        "Gamepad 2 X: shooter + transfer; A/B: intake only; gamepad 1 B: stop transfer only");
+        "Gamepad 2 X: shooter + transfer; A: intake on/off (feeds while shooting); B: intake off;"
+            + " gamepad 1 B: stop transfer only; gamepad 1 BACK: reset odometry in the corner");
     telemetry.addData("Flap positions (0-1)", flap.positionStatus());
     telemetry.addLine(
-        "Gamepad 2 D-pad up: flap UP; D-pad left: flap toggle; right-stick click: UP");
+        "Gamepad 2 D-pad up: flap UP; D-pad left: flap toggle; right-stick click: UP;"
+            + " gamepad 1 A: flap toggle");
+    telemetry.addLine(
+        "Gamepad 1 LT / RT: drive to the left / right CELL's spot; D-pad: drive to the FLOWER"
+            + " that way; Y: park; X: cancel drives");
     telemetry.addData("Alliance", profile.alliance());
     if (allianceUnconfirmed) {
       telemetry.addLine("!! No fresh handoff: confirm alliance. Press B = RED, X = BLUE.");
@@ -280,12 +301,17 @@ public abstract class TeleOpBase extends OpMode {
     operatorLeftStick.update(operator.left_stick_button);
     operatorRightStick.update(operator.right_stick_button);
 
-    driverX.update(driver.x);
+    driverA.update(driver.a);
     driverB.update(driver.b);
+    driverX.update(driver.x);
+    driverY.update(driver.y);
+    driverDpadUp.update(driver.dpad_up);
+    driverDpadDown.update(driver.dpad_down);
     driverDpadLeft.update(driver.dpad_left);
     driverDpadRight.update(driver.dpad_right);
     driverRightTrigger.update(driver.right_trigger > 0.5);
     driverLeftTrigger.update(driver.left_trigger > 0.5);
+    driverBack.update(driver.back);
   }
 
   @Override
@@ -303,6 +329,7 @@ public abstract class TeleOpBase extends OpMode {
     handleMatchCues();
     handleParkAlert();
     handleRelocalize();
+    handlePoseReset();
 
     OpModeUtil.drawRobot(panels, follower, turret, shotController.currentTarget());
     DrawingUtil.drawFieldZones(panels, sentinel);
@@ -378,6 +405,31 @@ public abstract class TeleOpBase extends OpMode {
     }
   }
 
+  /**
+   * Driver BACK, in INIT or after START, snaps odometry to {@code teleop.poses.<alliance>.reset}:
+   * the robot pushed into the corner of the audience wall and the RED alliance wall, back on the
+   * audience wall and left side on the RED wall. The heading lock re-latches, so it holds the new
+   * heading instead of turning back to the old one.
+   *
+   * @return whether the pose was reset this loop
+   */
+  private boolean handlePoseReset() {
+    if (!driverBack.onTrue()) {
+      return false;
+    }
+    Pose reset = profile.resetPose();
+    follower.setPose(reset);
+    casablanca.relatchHeading();
+    cornerResetStatus =
+        String.format(
+            Locale.ROOT,
+            "at (%.2f, %.2f, %.0f deg)",
+            reset.x(),
+            reset.y(),
+            Math.toDegrees(reset.heading()));
+    return true;
+  }
+
   /** Operator holds dpad down to re-anchor odometry on the upward CELL. */
   private void handleRelocalize() {
     if (!config.vision.continuous) {
@@ -415,7 +467,9 @@ public abstract class TeleOpBase extends OpMode {
     if (parkAlertActive) {
       telemetryM.addLine("!!!!!!!!!! PARK NOW !!!!!!!!!!");
     }
-    telemetryM.addData("Flower flap (D-pad up: UP; left: toggle)", flap.status());
+    telemetryM.addData(
+        "Flower flap (driver A or operator D-pad left: toggle; operator D-pad up: UP)",
+        flap.status());
     telemetryM.addData("Flap positions (0-1)", flap.positionStatus());
     telemetryM.addData("Alliance", profile.alliance());
     telemetryM.addData(
@@ -490,13 +544,16 @@ public abstract class TeleOpBase extends OpMode {
         "intakeTransfer (driver B stops; operator X resumes)", intake.getTransferStatus());
     telemetryM.addData("Pose", follower.pose());
     telemetryM.addData("Pose assist", driveAssistStatus);
+    if (!cornerResetStatus.isEmpty()) {
+      telemetryM.addData("Corner reset (driver BACK)", cornerResetStatus);
+    }
     if (!relocalizeStatus.isEmpty()) {
       telemetryM.addData("Vision fix", relocalizeStatus);
     }
     telemetryM.addData("Drive Mode", Casablanca.fieldCentric ? "FIELD-CENTRIC" : "ROBOT-CENTRIC");
     telemetryM.addData(
         "Heading Lock",
-        casablanca.isTargetHeadingLockActive() ? "UPWARD CELL (driver X)" : "last heading");
+        casablanca.isTargetHeadingLockActive() ? "UPWARD CELL (driver LT/RT)" : "last heading");
     if (casablanca.wasPoseUntrusted()) {
       telemetryM.addLine("!! DRIVE REFUSED: localizer pose is non-finite !!");
     }
@@ -506,16 +563,29 @@ public abstract class TeleOpBase extends OpMode {
     telemetryM.update(telemetry);
   }
 
-  /** Refuses a pose hold whose direct approach would cross the HIVE or the walls. */
+  /** The "Pose assist" telemetry line, for subclasses' own drive assists. */
+  protected void setDriveAssistStatus(String status) {
+    driveAssistStatus = status;
+  }
+
+  /**
+   * Refuses a pose hold whose direct approach would cross the HIVE or the walls, while {@code
+   * sentinel.footprint_safety_enabled}; with it off every hold drives straight to its target.
+   */
   protected void holdPoseIfClear(Pose target) {
     Pose from = follower.pose();
-    Optional<String> problem =
-        from.distance(target) == 0.0
-            ? sentinel.rotationProblem(from, target.heading(), false)
-            : sentinel.routeProblem(
-                org.firstinspires.ftc.teamcode.auto.PathUtil.pline(from, target),
-                config.sentinel.route_sample_step,
-                false);
+    Optional<String> problem;
+    if (!sentinel.footprintSafetyEnabled()) {
+      problem = Optional.empty();
+    } else if (from.distance(target) == 0.0) {
+      problem = sentinel.rotationProblem(from, target.heading(), false);
+    } else {
+      problem =
+          sentinel.routeProblem(
+              org.firstinspires.ftc.teamcode.auto.PathUtil.pline(from, target),
+              config.sentinel.route_sample_step,
+              false);
+    }
     if (problem.isPresent()) {
       driveAssistStatus = "blocked: " + problem.get();
       follower.stop();

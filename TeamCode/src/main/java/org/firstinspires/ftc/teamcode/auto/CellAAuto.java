@@ -54,7 +54,7 @@ public abstract class CellAAuto extends AllianceAutoBase<config.CellAAuto> {
     steps.add(volley(HiveCell.A));
     if (config.auto.cell_a_second_volley) {
       if (config.auto.cell_a_collect_flower) {
-        steps.add(collectAt(toFlower));
+        steps.add(collectAt(toFlower, poses.flower));
         steps.add(follow(follower, toScoreB));
       } else {
         // Use the same clear lane even when skipping collection.

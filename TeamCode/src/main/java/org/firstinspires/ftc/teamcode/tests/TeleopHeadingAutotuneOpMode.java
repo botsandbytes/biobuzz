@@ -8,6 +8,7 @@ import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+import com.qualcomm.robotcore.util.RobotLog;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.records.Alliance;
 import org.firstinspires.ftc.teamcode.robot.Robot;
@@ -28,6 +29,8 @@ public final class TeleopHeadingAutotuneOpMode extends LinearOpMode {
   private double bestScore = Double.POSITIVE_INFINITY;
   private String message = "Not started";
   private boolean abort;
+  // Which check ended the search: without it every abort reads the same ("Interrupted").
+  private String abortReason = "";
 
   @Override
   public void runOpMode() throws InterruptedException {
@@ -81,6 +84,7 @@ public final class TeleopHeadingAutotuneOpMode extends LinearOpMode {
     best = null;
     bestScore = Double.POSITIVE_INFINITY;
     abort = false;
+    abortReason = "";
     robot.follower.setPose(settings.calibration_pose);
     for (int pi = 0; pi < settings.p_count && !abort; pi++) {
       for (int di = 0; di < settings.d_count && !abort; di++) {
@@ -102,16 +106,16 @@ public final class TeleopHeadingAutotuneOpMode extends LinearOpMode {
     }
     robot.casablanca.setHeadingPid(null);
     stopDrive();
-    message = abort ? "Interrupted; only completed pairs are reported" : "Search complete";
+    message =
+        abort
+            ? "Interrupted (" + abortReason + "); only completed pairs are reported"
+            : "Search complete";
   }
 
   private double trial(PIDFCoefficients candidate, int direction) throws InterruptedException {
     try {
       stopDrive();
-      if (!settle()) {
-        abort = true;
-        return Double.POSITIVE_INFINITY;
-      }
+      if (!settle()) return aborted(abortReason);
       Pose start = robot.follower.pose();
       double step = direction * Math.toRadians(settings.step_degrees);
       double target = AngleUnit.normalizeRadians(start.heading() + step);
@@ -134,35 +138,31 @@ public final class TeleopHeadingAutotuneOpMode extends LinearOpMode {
         previous = now;
         Pose pose = robot.follower.pose();
         var velocity = robot.follower.velocity();
-        if (!healthy()
-            || dt > settings.maximum_sample_gap_sec
-            || pose.distance(start) > settings.position_drift_inches
-            || Math.abs(
-                    Math.toDegrees(AngleUnit.normalizeRadians(pose.heading() - start.heading())))
-                > settings.maximum_sweep_degrees) {
-          abort = true;
-          return Double.POSITIVE_INFINITY;
-        }
+        String unhealthy = unhealthy();
+        if (unhealthy != null) return aborted(unhealthy);
+        if (dt > settings.maximum_sample_gap_sec)
+          return aborted(String.format("loop gap %.0f ms", dt * 1e3));
+        if (pose.distance(start) > settings.position_drift_inches)
+          return aborted(String.format("drifted %.1f in", pose.distance(start)));
+        double sweep = Math.toDegrees(AngleUnit.normalizeRadians(pose.heading() - start.heading()));
+        if (Math.abs(sweep) > settings.maximum_sweep_degrees)
+          return aborted(String.format("swept %.1f deg", sweep));
         double error = AngleUnit.normalizeRadians(target - pose.heading());
         var status = response.update(error, velocity.omega, dt);
-        if (status == HeadingStepResponse.Status.INVALID) {
-          abort = true;
-          return Double.POSITIVE_INFINITY;
-        }
+        if (status == HeadingStepResponse.Status.INVALID)
+          return aborted("non-finite heading sample");
         if (status == HeadingStepResponse.Status.FAIL) return Double.POSITIVE_INFINITY;
         if (status == HeadingStepResponse.Status.PASS) return response.settlingSeconds();
         double[] adjusted =
             robot.casablanca.adjustDriveInput(
                 pose, velocity.toVector2D(), velocity.omega, 0, 0, 0, 0);
-        if (robot.casablanca.wasPoseUntrusted()
-            || !robot.casablanca.getLastRotationSafe()
-            || robot.casablanca.getLastDepthRepulsion()
-            || robot.casablanca.getLastSideRepulsion()
-            || robot.casablanca.getLastDepthScale() < 1
-            || robot.casablanca.getLastSideScale() < 1) {
-          abort = true;
-          return Double.POSITIVE_INFINITY;
-        }
+        var c = robot.casablanca;
+        if (c.wasPoseUntrusted()) return aborted("Casablanca: pose untrusted");
+        if (!c.getLastRotationSafe()) return aborted("Casablanca: rotation unsafe");
+        if (c.getLastDepthRepulsion()
+            || c.getLastSideRepulsion()
+            || c.getLastDepthScale() < 1
+            || c.getLastSideScale() < 1) return aborted("Casablanca: HIVE protection acted");
         robot.follower.manual(
             ManualDrive.fieldCentric(
                 new DrivePowers(adjusted[1], adjusted[0], adjusted[2]), pose.heading()));
@@ -176,11 +176,27 @@ public final class TeleopHeadingAutotuneOpMode extends LinearOpMode {
         telemetry.addLine("Hold A throughout. Release A or B aborts.");
         telemetry.update();
       }
-      abort = true;
-      return Double.POSITIVE_INFINITY;
+      return aborted(releaseReason());
     } finally {
       stopDrive();
     }
+  }
+
+  private double aborted(String reason) {
+    abort = true;
+    abortReason = reason;
+    RobotLog.ii("HeadingTuner", "trial aborted: %s", reason);
+    return Double.POSITIVE_INFINITY;
+  }
+
+  private String releaseReason() {
+    if (!opModeIsActive()) return "OpMode stopped";
+    return gamepad1.b ? "B pressed" : "A released";
+  }
+
+  private boolean settleFailed(String reason) {
+    abortReason = reason;
+    return false;
   }
 
   private boolean settle() throws InterruptedException {
@@ -193,7 +209,10 @@ public final class TeleopHeadingAutotuneOpMode extends LinearOpMode {
       double dt = (now - previous) * 1e-9;
       previous = now;
       elapsed += dt;
-      if (!healthy() || dt > settings.maximum_sample_gap_sec) return false;
+      String unhealthy = unhealthy();
+      if (unhealthy != null) return settleFailed(unhealthy + " while settling");
+      if (dt > settings.maximum_sample_gap_sec)
+        return settleFailed(String.format("loop gap %.0f ms while settling", dt * 1e3));
       var v = robot.follower.velocity();
       still =
           v.toVector2D().magnitude() <= settings.stopped_speed_ips
@@ -201,21 +220,25 @@ public final class TeleopHeadingAutotuneOpMode extends LinearOpMode {
               ? still + dt
               : 0;
       if (still >= settings.settle_sec) return true;
-      if (elapsed > settings.trial_timeout_sec) return false;
+      if (elapsed > settings.trial_timeout_sec) return settleFailed("robot never settled");
     }
-    return false;
+    return settleFailed(releaseReason() + " while settling");
   }
 
-  private boolean healthy() {
+  /** Why the odometry cannot be trusted, or null when it can. */
+  private @Nullable String unhealthy() {
+    var status = pinpoint.getDeviceStatus();
+    if (status != GoBildaPinpointDriver.DeviceStatus.READY) return "Pinpoint " + status;
     Pose p = robot.follower.pose();
     var v = robot.follower.velocity();
-    return pinpoint.getDeviceStatus() == GoBildaPinpointDriver.DeviceStatus.READY
-        && Double.isFinite(p.x())
-        && Double.isFinite(p.y())
-        && Double.isFinite(p.heading())
-        && Double.isFinite(v.vx)
-        && Double.isFinite(v.vy)
-        && Double.isFinite(v.omega);
+    boolean finite =
+        Double.isFinite(p.x())
+            && Double.isFinite(p.y())
+            && Double.isFinite(p.heading())
+            && Double.isFinite(v.vx)
+            && Double.isFinite(v.vy)
+            && Double.isFinite(v.omega);
+    return finite ? null : "non-finite pose or velocity";
   }
 
   private boolean held() {

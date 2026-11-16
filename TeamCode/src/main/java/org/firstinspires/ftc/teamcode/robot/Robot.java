@@ -109,9 +109,12 @@ public final class Robot {
     this(hardwareMap, telemetry, profile, false);
   }
 
-  /** The flap is mapped only for TeleOp; autonomous composition keeps its existing hardware. */
+  /**
+   * The flap is mapped only for match OpModes (TeleOp and AUTO, which raises it to drive);
+   * calibration OpModes leave it unmapped.
+   */
   public Robot(
-      HardwareMap hardwareMap, Telemetry telemetry, MatchProfile profile, boolean forTeleOp) {
+      HardwareMap hardwareMap, Telemetry telemetry, MatchProfile profile, boolean mapFlap) {
     this.telemetry = telemetry;
 
     allHubs = hardwareMap.getAll(LynxModule.class);
@@ -124,7 +127,7 @@ public final class Robot {
     field = new FieldModel(profile.alliance());
     hive = HiveTracker.fromConfig(Robot::nowMs);
 
-    flap = new FlowerFlap(hardwareMap, forTeleOp);
+    flap = new FlowerFlap(hardwareMap, mapFlap);
     shooter = new Shooter(hardwareMap);
     intake = new Intake(hardwareMap, shooter::getTargetPower);
     turret = new Turret(hardwareMap, telemetry, follower::pose, follower::velocity);

@@ -9,9 +9,9 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.List;
+import org.firstinspires.ftc.teamcode.robot.Shooter;
 import org.firstinspires.ftc.teamcode.robot.config.generated.config;
 import org.firstinspires.ftc.teamcode.utilities.OpModeUtil;
 
@@ -54,11 +54,11 @@ public class ShooterAutotuneOpMode extends LinearOpMode {
 
     shooter1.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     shooter1.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
-    shooter1.setDirection(DcMotorSimple.Direction.FORWARD);
+    shooter1.setDirection(Shooter.SHOOTER1_DIRECTION);
 
     shooter2.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
     shooter2.setMode(DcMotorEx.RunMode.RUN_WITHOUT_ENCODER);
-    shooter2.setDirection(DcMotorSimple.Direction.REVERSE);
+    shooter2.setDirection(Shooter.SHOOTER2_DIRECTION);
 
     stopMotors();
 
